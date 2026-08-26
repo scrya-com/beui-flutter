@@ -1,0 +1,25 @@
+/// beUI for Flutter — motion components ported from https://beui.dev
+library;
+
+export 'src/gestures/row_cursor.dart';
+export 'src/gestures/slider.dart';
+export 'src/motion/hover.dart';
+export 'src/motion/presence.dart';
+export 'src/motion/reduce.dart';
+export 'src/motion/spring_motion.dart';
+export 'src/physics/spring.dart';
+export 'src/tokens/colors.dart';
+export 'src/tokens/ease.dart';
+export 'src/tokens/oklch.dart';
+export 'src/tokens/theme.dart';
+export 'src/widgets/icons.dart';
+export 'src/widgets/motion/button.dart';
+export 'src/widgets/motion/button_magnetic.dart';
+export 'src/widgets/motion/button_metallic.dart';
+export 'src/widgets/motion/button_stateful.dart';
+export 'src/widgets/motion/checkbox.dart';
+export 'src/widgets/motion/input.dart';
+export 'src/widgets/motion/magnetic.dart';
+export 'src/widgets/motion/radio.dart';
+export 'src/widgets/motion/switch.dart';
+export 'src/widgets/motion/tabs.dart';

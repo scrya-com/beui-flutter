@@ -1,0 +1,23 @@
+name: beui
+description: Animated Flutter widgets ported from beUI. Springs, theme, and components with visual and behavioral parity.
+version: 0.1.0
+homepage: https://beui.dev
+repository: https://github.com/johndpope/beui-flutter
+
+environment:
+  sdk: ^3.12.1
+  flutter: ">=3.44.0"
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: false

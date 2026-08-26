@@ -1,0 +1,28 @@
+# Flutter
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+*.iml
+.idea/
+.vscode/
+
+# Pub — lockfiles are committed
+
+# Native
+**/ios/Pods/
+**/ios/.symlinks/
+**/android/.gradle/
+**/android/local.properties
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+
+# Rust
+crates/**/target/
+
+# Misc
+.DS_Store
+*.log
+.env

@@ -1,0 +1,7 @@
+name: beui_workspace
+publish_to: none
+environment:
+  sdk: ^3.12.1
+workspace:
+  - packages/beui
+  - apps/gallery
