@@ -1,6 +1,7 @@
 /// beUI for Flutter — motion components ported from https://beui.dev
 library;
 
+export 'src/favicon.dart';
 export 'src/gestures/row_cursor.dart';
 export 'src/gestures/slider.dart';
 export 'src/motion/hover.dart';

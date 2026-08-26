@@ -746,6 +746,26 @@ class BeuiIcons {
     c.drawCircle(const Offset(18, 12), 1.2, p);
   }
 
+  static void externalLink(Canvas c, Size s, Paint p) {
+    c.drawPath(
+      Path()
+        ..moveTo(15, 3)
+        ..lineTo(21, 3)
+        ..lineTo(21, 9),
+      p,
+    );
+    c.drawLine(const Offset(10, 14), const Offset(21, 3), p);
+    c.drawPath(
+      Path()
+        ..moveTo(18, 13)
+        ..lineTo(18, 19)
+        ..lineTo(5, 19)
+        ..lineTo(5, 8)
+        ..lineTo(11, 8),
+      p,
+    );
+  }
+
   static void arrowUp(Canvas c, Size s, Paint p) {
     c.drawLine(const Offset(12, 19), const Offset(12, 5), p);
     c.drawPath(

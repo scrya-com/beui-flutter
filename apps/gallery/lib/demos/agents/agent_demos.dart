@@ -1,5 +1,6 @@
 import 'package:beui/beui.dart';
 import 'package:flutter/widgets.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ThinkingShimmerDemo extends StatelessWidget {
   const ThinkingShimmerDemo({super.key});
@@ -981,6 +982,7 @@ class _CitationsDemoState extends State<CitationsDemo>
           BeuiCitations(
             citations: CitationsDemo.items.take(_visible).toList(),
             initialOpen: true,
+            onOpenUrl: (url) => launchUrl(Uri.parse(url)),
           ),
         ],
       ),

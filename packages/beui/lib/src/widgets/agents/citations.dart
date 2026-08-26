@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+import '../../favicon.dart';
+import '../../motion/hover.dart';
 import '../../motion/reduce.dart';
 import '../../motion/spring_motion.dart';
 import '../../tokens/ease.dart';
@@ -35,25 +37,154 @@ class BeuiCitation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.beuiColors;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colors.muted.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-          child: Text(
-            '$index',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              height: 1,
-              color: colors.mutedForeground,
+    return Semantics(
+      label: semanticLabel ?? 'View citation $index',
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: Transform.translate(
+          offset: const Offset(0, -2),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: colors.muted.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: Text(
+                '$index',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  height: 1,
+                  color: colors.mutedForeground,
+                ),
+              ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Site favicon with a globe fallback. Port of `CitationFavicon`.
+class BeuiCitationFavicon extends StatefulWidget {
+  const BeuiCitationFavicon({
+    super.key,
+    this.url,
+    this.size = 20,
+  });
+
+  final String? url;
+  final double size;
+
+  @override
+  State<BeuiCitationFavicon> createState() => _BeuiCitationFaviconState();
+}
+
+class _BeuiCitationFaviconState extends State<BeuiCitationFavicon> {
+  late List<String> _srcs;
+  int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _srcs = _resolve(widget.url);
+  }
+
+  @override
+  void didUpdateWidget(BeuiCitationFavicon oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url) {
+      _srcs = _resolve(widget.url);
+      _index = 0;
+    }
+  }
+
+  List<String> _resolve(String? url) {
+    final primary = beuiFaviconUrl(url);
+    final fallback = beuiFaviconFallbackUrl(url);
+    return [
+      ?primary,
+      if (fallback != primary) ?fallback,
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.beuiColors;
+    final box = widget.size;
+    final glyph = BeuiIcon(
+      BeuiIcons.globe,
+      size: widget.size * 0.7,
+      color: colors.mutedForeground,
+    );
+    final src = _index < _srcs.length ? _srcs[_index] : null;
+    return SizedBox(
+      width: box,
+      height: box,
+      child: Center(
+        child: src == null
+            ? glyph
+            : ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: Image.network(
+                  src,
+                  width: widget.size * 0.8,
+                  height: widget.size * 0.8,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.medium,
+                  gaplessPlayback: true,
+                  errorBuilder: (context, error, stack) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!mounted) return;
+                      if (_index < _srcs.length - 1) {
+                        setState(() => _index += 1);
+                      }
+                    });
+                    if (_index >= _srcs.length - 1) return glyph;
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+/// Overlapping favicon pile. Port of `CitationStack`.
+class BeuiCitationStack extends StatelessWidget {
+  const BeuiCitationStack({
+    super.key,
+    required this.citations,
+    this.limit = 3,
+  });
+
+  final List<BeuiCitationItem> citations;
+  final int limit;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.beuiColors;
+    final items = citations.take(limit).toList();
+    return SizedBox(
+      width: items.isEmpty ? 0 : 24 + (items.length - 1) * 18.0,
+      height: 24,
+      child: Stack(
+        children: [
+          for (var i = 0; i < items.length; i++)
+            Positioned(
+              left: i * 18,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colors.background,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: colors.background, width: 2),
+                ),
+                child: BeuiCitationFavicon(url: items[i].url, size: 24),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -68,6 +199,7 @@ class BeuiCitations extends StatefulWidget {
     this.open,
     this.initialOpen = false,
     this.onOpenChanged,
+    this.onOpenUrl,
   });
 
   final List<BeuiCitationItem> citations;
@@ -75,6 +207,7 @@ class BeuiCitations extends StatefulWidget {
   final bool? open;
   final bool initialOpen;
   final ValueChanged<bool>? onOpenChanged;
+  final ValueChanged<String>? onOpenUrl;
 
   @override
   State<BeuiCitations> createState() => _BeuiCitationsState();
@@ -104,27 +237,49 @@ class _BeuiCitationsState extends State<BeuiCitations> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () => _setOpen(!_open),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(
-              spacing: 8,
               children: [
                 BeuiIcon(
                   BeuiIcons.book,
                   size: 16,
                   color: colors.mutedForeground,
                 ),
-                Expanded(
-                  child: Text(
-                    '${widget.title} · ${widget.citations.length}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: colors.foreground,
+                const SizedBox(width: 8),
+                Text(
+                  widget.title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: colors.mutedForeground,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: colors.muted,
+                    borderRadius: BorderRadius.circular(BeuiRadii.pill),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    child: Text(
+                      '${widget.citations.length}',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                        color: colors.mutedForeground,
+                      ),
                     ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 BeuiSpringBuilder(
                   value: _open ? 1 : 0,
                   spec: BeuiSpringSpec.swap,
@@ -133,8 +288,8 @@ class _BeuiCitationsState extends State<BeuiCitations> {
                       angle: t * 3.14159,
                       child: BeuiIcon(
                         BeuiIcons.chevronDown,
-                        size: 16,
-                        color: colors.mutedForeground,
+                        size: 14,
+                        color: colors.mutedForeground.withValues(alpha: 0.6),
                       ),
                     );
                   },
@@ -155,6 +310,7 @@ class _BeuiCitationsState extends State<BeuiCitations> {
                     child: _CitationRow(
                       index: i + 1,
                       item: widget.citations[i],
+                      onOpenUrl: widget.onOpenUrl,
                     ),
                   ),
               ],
@@ -206,7 +362,9 @@ class _CitationEnterState extends State<_CitationEnter>
       _fade.value = 1;
       return;
     }
-    if (TickerMode.valuesOf(context).enabled && _y.value == 0 && !_y.isAnimating) {
+    if (TickerMode.valuesOf(context).enabled &&
+        _y.value == 0 &&
+        !_y.isAnimating) {
       _y.animateTo(1);
       _fade.forward();
     }
@@ -237,54 +395,118 @@ class _CitationEnterState extends State<_CitationEnter>
   }
 }
 
-class _CitationRow extends StatelessWidget {
-  const _CitationRow({required this.index, required this.item});
+class _CitationRow extends StatefulWidget {
+  const _CitationRow({
+    required this.index,
+    required this.item,
+    this.onOpenUrl,
+  });
+
   final int index;
   final BeuiCitationItem item;
+  final ValueChanged<String>? onOpenUrl;
+
+  @override
+  State<_CitationRow> createState() => _CitationRowState();
+}
+
+class _CitationRowState extends State<_CitationRow> {
+  bool _hover = false;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.beuiColors;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+    final item = widget.item;
+    final hover = _hover && beuiHoverCapable(context);
+    final row = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       child: Row(
-        spacing: 10,
         children: [
-          SizedBox(
-            width: 20,
-            child: Text(
-              '$index',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: colors.mutedForeground,
-              ),
-            ),
-          ),
+          BeuiCitationFavicon(url: item.url),
+          const SizedBox(width: 8),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 2,
               children: [
                 Text(
                   item.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: colors.foreground,
+                    color: hover
+                        ? colors.foreground
+                        : colors.foreground.withValues(alpha: 0.8),
                   ),
                 ),
                 if (item.domain != null)
                   Text(
                     item.domain!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 12,
-                      color: colors.mutedForeground,
+                      color: colors.mutedForeground.withValues(alpha: 0.6),
                     ),
                   ),
               ],
             ),
           ),
+          const SizedBox(width: 8),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: colors.foreground.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: Center(
+                child: Text(
+                  '${widget.index}',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                    color: colors.mutedForeground,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (item.url != null) ...[
+            const SizedBox(width: 6),
+            BeuiIcon(
+              BeuiIcons.externalLink,
+              size: 14,
+              color: hover
+                  ? colors.mutedForeground
+                  : colors.mutedForeground.withValues(alpha: 0.4),
+            ),
+          ],
         ],
+      ),
+    );
+
+    return MouseRegion(
+      cursor: item.url != null
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
+      onEnter: (_) => beuiAfterPointer(() {
+        if (mounted) setState(() => _hover = true);
+      }),
+      onExit: (_) => beuiAfterPointer(() {
+        if (mounted) setState(() => _hover = false);
+      }),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: item.url == null
+            ? null
+            : () => widget.onOpenUrl?.call(item.url!),
+        child: row,
       ),
     );
   }

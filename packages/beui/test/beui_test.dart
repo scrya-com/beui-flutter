@@ -650,6 +650,46 @@ void main() {
     });
   });
 
+  group('beuiFaviconUrl', () {
+    test('resolves origin /favicon.ico', () {
+      expect(
+        beuiFaviconUrl('https://react.dev/learn'),
+        'https://react.dev/favicon.ico',
+      );
+      expect(
+        beuiFaviconFallbackUrl('https://www.w3.org/WAI/ARIA/apg/'),
+        'https://www.google.com/s2/favicons?sz=32&domain=www.w3.org',
+      );
+    });
+  });
+
+  group('BeuiCitations', () {
+    testWidgets('lists source titles', (tester) async {
+      await tester.pumpWidget(
+        BeuiTheme.wrap(
+          child: const Directionality(
+            textDirection: TextDirection.ltr,
+            child: BeuiCitations(
+              initialOpen: true,
+              citations: [
+                BeuiCitationItem(
+                  id: 'react',
+                  title: 'React documentation',
+                  domain: 'react.dev',
+                  url: 'https://react.dev/learn',
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('Sources'), findsOneWidget);
+      expect(find.text('React documentation'), findsOneWidget);
+      expect(find.text('react.dev'), findsOneWidget);
+    });
+  });
+
   group('BeuiToolApproval', () {
     Widget wrapCard(Widget child, {double width = 420}) {
       return BeuiTheme.wrap(
