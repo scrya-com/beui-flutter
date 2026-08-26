@@ -2,12 +2,24 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
+/// Schedule a rebuild after the current mouse-tracker phase.
+///
+/// `MouseRegion.onEnter` / `Listener.onPointerHover` run inside
+/// `_deviceUpdatePhase`. Calling `setState` there recursively re-enters the
+/// tracker (Flutter `mouse_tracker.dart:199`).
+void beuiAfterPointer(VoidCallback fn) {
+  WidgetsBinding.instance.addPostFrameCallback((_) => fn());
+}
+
 /// True only on devices with a real hover (mouse / trackpad).
 ///
 /// Touch fires phantom hover on tap that sticks until tap-elsewhere —
 /// gate hover-only effects (scale lifts, magnetic pulls) behind this.
 /// Mirrors `useHoverCapable` (`(hover: hover) and (pointer: fine)`).
+/// Flutter web reports `defaultTargetPlatform` as Android, so [kIsWeb] is
+/// treated as hover-capable.
 bool beuiHoverCapable(BuildContext context) {
+  if (kIsWeb) return true;
   final kind = BeuiPointerKind.maybeOf(context);
   if (kind != null) return kind == PointerDeviceKind.mouse;
   switch (defaultTargetPlatform) {
@@ -64,6 +76,9 @@ class _BeuiPointerScopeState extends State<BeuiPointerScope> {
 
   void _set(PointerDeviceKind kind) {
     if (kind == _kind) return;
-    setState(() => _kind = kind);
+    _kind = kind;
+    beuiAfterPointer(() {
+      if (mounted) setState(() {});
+    });
   }
 }

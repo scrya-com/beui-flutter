@@ -194,4 +194,77 @@ class BeuiIcons {
       p,
     );
   }
+
+  static void chevronDown(Canvas c, Size s, Paint p) {
+    c.drawPath(
+      Path()
+        ..moveTo(6, 9)
+        ..lineTo(12, 15)
+        ..lineTo(18, 9),
+      p,
+    );
+  }
+
+  static void plus(Canvas c, Size s, Paint p) {
+    c.drawLine(const Offset(12, 5), const Offset(12, 19), p);
+    c.drawLine(const Offset(5, 12), const Offset(19, 12), p);
+  }
+
+  static void square(Canvas c, Size s, Paint p) {
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(6, 6, 12, 12),
+        const Radius.circular(2),
+      ),
+      p,
+    );
+  }
+
+  static void listTodo(Canvas c, Size s, Paint p) {
+    c.drawLine(const Offset(10, 6), const Offset(20, 6), p);
+    c.drawLine(const Offset(10, 12), const Offset(20, 12), p);
+    c.drawLine(const Offset(10, 18), const Offset(20, 18), p);
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(3, 4, 4, 4),
+        const Radius.circular(1),
+      ),
+      p,
+    );
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(3, 10, 4, 4),
+        const Radius.circular(1),
+      ),
+      p,
+    );
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(3, 16, 4, 4),
+        const Radius.circular(1),
+      ),
+      p,
+    );
+  }
+
+  static void rotateCcw(Canvas c, Size s, Paint p) {
+    c.drawPath(
+      Path()
+        ..moveTo(3, 12)
+        ..arcToPoint(
+          const Offset(21, 12),
+          radius: const Radius.circular(9),
+          clockwise: false,
+        ),
+      p,
+    );
+    c.drawPath(
+      Path()
+        ..moveTo(3, 12)
+        ..lineTo(3, 6)
+        ..moveTo(3, 12)
+        ..lineTo(8, 12),
+      p,
+    );
+  }
 }

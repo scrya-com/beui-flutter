@@ -62,7 +62,16 @@ class _BeuiButtonState extends State<BeuiButton>
   void initState() {
     super.initState();
     _scale = BeuiSpringValue(value: 1, spec: BeuiSpringSpec.press)..attach(this);
-    _scale.addListener(() {
+    _scale.addListener(_onScale);
+  }
+
+  bool _scaleFrame = false;
+
+  void _onScale() {
+    if (_scaleFrame) return;
+    _scaleFrame = true;
+    beuiAfterPointer(() {
+      _scaleFrame = false;
       if (mounted) setState(() {});
     });
   }
@@ -75,7 +84,9 @@ class _BeuiButtonState extends State<BeuiButton>
 
   @override
   void dispose() {
-    _scale.dispose();
+    _scale
+      ..removeListener(_onScale)
+      ..dispose();
     super.dispose();
   }
 
@@ -138,12 +149,12 @@ class _BeuiButtonState extends State<BeuiButton>
         cursor: _canPress ? SystemMouseCursors.click : SystemMouseCursors.basic,
         onEnter: (_) {
           _hovered = true;
-          _syncScale();
+          beuiAfterPointer(_syncScale);
         },
         onExit: (_) {
           _hovered = false;
           _pressed = false;
-          _syncScale();
+          beuiAfterPointer(_syncScale);
         },
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,

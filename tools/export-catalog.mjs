@@ -38,6 +38,15 @@ const implemented = new Set([
   "motion/radio",
   "motion/input",
   "motion/tabs",
+  "agents/thinking-shimmer",
+  "agents/agent-progress",
+  "agents/reasoning-text",
+  "agents/message-bubble",
+  "agents/message-bubble-avatars",
+  "agents/message-bubble-collapsible",
+  "agents/prompt-input",
+  "agents/todo-list",
+  "agents/message",
 ]);
 
 const title = (key) => {
@@ -91,8 +100,15 @@ ${entries
   .join("\n")}
 ];
 
-List<CatalogEntry> catalogFor(String category) =>
-    catalog.where((e) => e.category == category).toList();
+List<CatalogEntry> catalogFor(String category, {bool liveOnly = true}) {
+  final items = catalog.where((e) => e.category == category).toList()
+    ..sort((a, b) {
+      if (a.implemented == b.implemented) return a.name.compareTo(b.name);
+      return a.implemented ? -1 : 1;
+    });
+  if (liveOnly) return items.where((e) => e.implemented).toList();
+  return items;
+}
 `;
 
 writeFileSync(dest, dart);

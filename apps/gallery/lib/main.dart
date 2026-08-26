@@ -19,7 +19,7 @@ class BeuiGalleryApp extends StatefulWidget {
 
 class _BeuiGalleryAppState extends State<BeuiGalleryApp> {
   BeuiColorTheme colorTheme = BeuiColorTheme.mono;
-  String category = 'motion';
+  String category = 'agents';
   String? selectedKey;
   bool showRemaining = false;
 

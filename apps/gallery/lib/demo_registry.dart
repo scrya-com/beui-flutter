@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'demos/agents/agent_demos.dart';
 import 'demos/motion/button_demos.dart';
 import 'demos/motion/form_demos.dart';
 
@@ -16,4 +17,13 @@ final demoBuilders = <String, DemoBuilder>{
   'motion/radio': () => const RadioDemo(),
   'motion/input': () => const InputDemo(),
   'motion/tabs': () => const TabsDemo(),
+  'agents/thinking-shimmer': () => const ThinkingShimmerDemo(),
+  'agents/agent-progress': () => const AgentProgressDemo(),
+  'agents/reasoning-text': () => const ReasoningTextDemo(),
+  'agents/message-bubble': () => const MessageBubbleDemo(),
+  'agents/message-bubble-avatars': () => const MessageBubbleAvatarsDemo(),
+  'agents/message-bubble-collapsible': () => const MessageBubbleCollapsibleDemo(),
+  'agents/prompt-input': () => const PromptInputDemo(),
+  'agents/todo-list': () => const TodoListDemo(),
+  'agents/message': () => const MessageDemo(),
 };

@@ -162,6 +162,54 @@ void main() {
     });
   });
 
+  group('BeuiTodoList', () {
+    testWidgets('re-opens when a completed plan starts a new lifecycle',
+        (tester) async {
+      var open = false;
+      await tester.pumpWidget(
+        BeuiTheme.wrap(
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Center(
+              child: BeuiTodoList(
+                open: open,
+                onOpenChanged: (v) => open = v,
+                items: const [
+                  BeuiTodoItem(
+                    id: 'a',
+                    title: 'Done',
+                    status: BeuiTodoStatus.completed,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpWidget(
+        BeuiTheme.wrap(
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Center(
+              child: BeuiTodoList(
+                open: open,
+                onOpenChanged: (v) => open = v,
+                items: const [
+                  BeuiTodoItem(
+                    id: 'a',
+                    title: 'Done',
+                    status: BeuiTodoStatus.pending,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(open, isTrue);
+    });
+  });
+
   group('BeuiRowCursor', () {
     test('clears a stale id instead of keeping the old highlight', () {
       final cursor = BeuiRowCursor();

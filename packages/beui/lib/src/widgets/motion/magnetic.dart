@@ -34,8 +34,15 @@ class _BeuiMagneticState extends State<BeuiMagnetic>
     _y.addListener(_tick);
   }
 
+  bool _frame = false;
+
   void _tick() {
-    if (mounted) setState(() {});
+    if (_frame) return;
+    _frame = true;
+    beuiAfterPointer(() {
+      _frame = false;
+      if (mounted) setState(() {});
+    });
   }
 
   @override
