@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import '../../tokens/ease.dart';
 import '../../tokens/theme.dart';
 import '../icons.dart';
 import '../motion/button.dart';
@@ -123,57 +124,65 @@ class _BeuiPromptInputState extends State<BeuiPromptInput> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (_actionsOpen && widget.actions.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            decoration: BoxDecoration(
-              color: colors.card,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: colors.border),
-            ),
-            child: Column(
-              children: [
-                for (final action in widget.actions)
-                  GestureDetector(
-                    onTap: () {
-                      setState(() => _actionsOpen = false);
-                      widget.onAction?.call(action.value);
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              action.label,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: colors.foreground,
+        ClipRect(
+          child: AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: BeuiCurves.easeOut,
+            alignment: Alignment.topCenter,
+            child: !_actionsOpen || widget.actions.isEmpty
+                ? const SizedBox(width: double.infinity, height: 0)
+                : Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    decoration: BoxDecoration(
+                      color: colors.card,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: colors.border),
+                    ),
+                    child: Column(
+                      children: [
+                        for (final action in widget.actions)
+                          GestureDetector(
+                            onTap: () {
+                              setState(() => _actionsOpen = false);
+                              widget.onAction?.call(action.value);
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
                               ),
-                            ),
-                            if (action.description != null)
-                              Text(
-                                action.description!,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: colors.mutedForeground,
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      action.label,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: colors.foreground,
+                                      ),
+                                    ),
+                                    if (action.description != null)
+                                      Text(
+                                        action.description!,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: colors.mutedForeground,
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ),
-                          ],
-                        ),
-                      ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-              ],
-            ),
           ),
+        ),
         DecoratedBox(
           decoration: BoxDecoration(
             color: colors.card,
@@ -225,9 +234,14 @@ class _BeuiPromptInputState extends State<BeuiPromptInput> {
                         semanticLabel: 'Actions',
                         onPressed: () =>
                             setState(() => _actionsOpen = !_actionsOpen),
-                        child: BeuiIcon(
-                          BeuiIcons.plus,
-                          color: colors.mutedForeground,
+                        child: AnimatedRotation(
+                          turns: _actionsOpen ? 0.125 : 0,
+                          duration: const Duration(milliseconds: 220),
+                          curve: BeuiCurves.easeOut,
+                          child: BeuiIcon(
+                            BeuiIcons.plus,
+                            color: colors.mutedForeground,
+                          ),
                         ),
                       ),
                     if (widget.models.isNotEmpty)
@@ -249,9 +263,26 @@ class _BeuiPromptInputState extends State<BeuiPromptInput> {
                       semanticLabel: widget.loading ? 'Stop' : 'Send',
                       enabled: widget.loading || canSend,
                       onPressed: widget.loading ? widget.onStop : _submit,
-                      child: BeuiIcon(
-                        widget.loading ? BeuiIcons.square : BeuiIcons.arrowRight,
-                        color: colors.primaryForeground,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 180),
+                        switchInCurve: BeuiCurves.easeOut,
+                        switchOutCurve: BeuiCurves.easeOut,
+                        transitionBuilder: (child, anim) {
+                          return FadeTransition(
+                            opacity: anim,
+                            child: ScaleTransition(
+                              scale: Tween(begin: 0.7, end: 1.0).animate(anim),
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: BeuiIcon(
+                          widget.loading
+                              ? BeuiIcons.square
+                              : BeuiIcons.arrowRight,
+                          key: ValueKey(widget.loading),
+                          color: colors.primaryForeground,
+                        ),
                       ),
                     ),
                   ],

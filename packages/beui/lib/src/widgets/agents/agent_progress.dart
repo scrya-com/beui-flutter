@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/widgets.dart';
 
 import '../../motion/reduce.dart';
@@ -31,10 +29,10 @@ class BeuiAgentProgress extends StatefulWidget {
 }
 
 class _BeuiAgentProgressState extends State<BeuiAgentProgress>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late double _internal;
-  Timer? _timer;
   late final AnimationController _pulse;
+  late final AnimationController _clock;
 
   bool get _controlled => widget.elapsedSeconds != null;
   double get _elapsed => widget.elapsedSeconds ?? _internal;
@@ -47,49 +45,44 @@ class _BeuiAgentProgressState extends State<BeuiAgentProgress>
       vsync: this,
       duration: const Duration(milliseconds: 1600),
     );
+    _clock = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    )..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          if (!mounted || _controlled || !widget.running) return;
+          setState(() => _internal += 0.1);
+          _clock.forward(from: 0);
+        }
+      });
   }
 
   @override
   void didUpdateWidget(BeuiAgentProgress oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.running != widget.running ||
-        oldWidget.elapsedSeconds != widget.elapsedSeconds) {
-      _arm();
-    }
+    _sync();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!TickerMode.valuesOf(context).enabled) {
-      _timer?.cancel();
-      _timer = null;
-      _pulse.stop();
-    } else {
-      if (!_pulse.isAnimating && !beuiReduceMotion(context)) _pulse.repeat();
-      _arm();
-    }
+    _sync();
   }
 
-  void _arm() {
-    _timer?.cancel();
-    if (_controlled || !widget.running) return;
-    if (!TickerMode.valuesOf(context).enabled) return;
-    final started = DateTime.now().subtract(
-      Duration(milliseconds: (widget.initialSeconds * 1000).round()),
-    );
-    _timer = Timer.periodic(const Duration(milliseconds: 100), (_) {
-      if (!mounted) return;
-      setState(() {
-        _internal = DateTime.now().difference(started).inMilliseconds / 1000;
-      });
-    });
+  void _sync() {
+    final live = TickerMode.valuesOf(context).enabled &&
+        !beuiReduceMotion(context);
+    if (live && !_pulse.isAnimating) _pulse.repeat();
+    if (!live && _pulse.isAnimating) _pulse.stop();
+    final clock = live && !_controlled && widget.running;
+    if (clock && !_clock.isAnimating) _clock.forward();
+    if (!clock && _clock.isAnimating) _clock.stop();
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
     _pulse.dispose();
+    _clock.dispose();
     super.dispose();
   }
 

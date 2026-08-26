@@ -39,12 +39,9 @@ class CatalogPreviewFit extends StatelessWidget {
               child: Transform.scale(
                 scale: scale,
                 child: IgnorePointer(
-                  child: TickerMode(
-                    enabled: false,
-                    child: SizedBox(
-                      width: stageWidth,
-                      child: child,
-                    ),
+                  child: SizedBox(
+                    width: stageWidth,
+                    child: child,
                   ),
                 ),
               ),

@@ -95,6 +95,7 @@ class MessageBubbleDemo extends StatelessWidget {
           BeuiMessageBubble(
             align: BeuiMessageAlign.start,
             variant: BeuiMessageBubbleVariant.soft,
+            animateIn: true,
             child: Text(
               'The release improves streaming, navigation, and recovery states.',
             ),
@@ -134,6 +135,7 @@ class MessageBubbleAvatarsDemo extends StatelessWidget {
       final bubble = BeuiMessageBubble(
         align: end ? BeuiMessageAlign.end : BeuiMessageAlign.start,
         variant: variant,
+        animateIn: true,
         child: Text(body),
       );
       return Row(
@@ -250,9 +252,11 @@ class TodoListDemo extends StatefulWidget {
   State<TodoListDemo> createState() => _TodoListDemoState();
 }
 
-class _TodoListDemoState extends State<TodoListDemo> {
+class _TodoListDemoState extends State<TodoListDemo>
+    with SingleTickerProviderStateMixin {
   int step = 0;
   int run = 0;
+  late final AnimationController _clock;
 
   static const tasks = [
     'Inspect the current data flow',
@@ -262,25 +266,34 @@ class _TodoListDemoState extends State<TodoListDemo> {
   ];
   static const ticks = 4;
 
-  bool _running = false;
+  @override
+  void initState() {
+    super.initState();
+    _clock = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    )..addStatusListener((status) {
+        if (status != AnimationStatus.completed || !mounted) return;
+        if (step >= tasks.length * ticks) return;
+        setState(() => step++);
+        if (step < tasks.length * ticks) _clock.forward(from: 0);
+      });
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (TickerMode.valuesOf(context).enabled && !_running) {
-      _running = true;
-      _tick();
+    if (TickerMode.valuesOf(context).enabled &&
+        step < tasks.length * ticks &&
+        !_clock.isAnimating) {
+      _clock.forward();
     }
   }
 
-  void _tick() {
-    if (step >= tasks.length * ticks) return;
-    Future<void>.delayed(const Duration(milliseconds: 280), () {
-      if (!mounted) return;
-      if (!TickerMode.valuesOf(context).enabled) return;
-      setState(() => step++);
-      _tick();
-    });
+  @override
+  void dispose() {
+    _clock.dispose();
+    super.dispose();
   }
 
   List<BeuiTodoItem> get items {
@@ -316,11 +329,13 @@ class _TodoListDemoState extends State<TodoListDemo> {
             left: 0,
             bottom: 0,
             child: GestureDetector(
-              onTap: () => setState(() {
-                step = 0;
-                run++;
-                _tick();
-              }),
+              onTap: () {
+                setState(() {
+                  step = 0;
+                  run++;
+                });
+                _clock.forward(from: 0);
+              },
               child: Row(
                 children: [
                   BeuiIcon(

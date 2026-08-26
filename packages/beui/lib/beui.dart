@@ -4,6 +4,7 @@ library;
 export 'src/gestures/row_cursor.dart';
 export 'src/gestures/slider.dart';
 export 'src/motion/hover.dart';
+export 'src/motion/pop_in.dart';
 export 'src/motion/presence.dart';
 export 'src/motion/reduce.dart';
 export 'src/motion/spring_motion.dart';

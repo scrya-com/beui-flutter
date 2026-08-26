@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../../motion/pop_in.dart';
 import '../../motion/reduce.dart';
 import '../../motion/spring_motion.dart';
 import '../../tokens/ease.dart';
@@ -115,24 +116,14 @@ class BeuiMessageBubbleContent extends StatelessWidget {
       ),
     );
 
-    if (!animateIn || reduce) return bubble;
-
-    return BeuiSpringBuilder(
-      value: 1,
+    return BeuiPopIn(
+      enabled: animateIn && !reduce,
       spec: const BeuiSpringSpec(stiffness: 520, damping: 27, mass: 0.52),
-      builder: (context, t) {
-        final s = 0.92 + 0.08 * t.clamp(0.0, 1.2);
-        return Opacity(
-          opacity: t.clamp(0.0, 1.0),
-          child: Transform.scale(
-            alignment: align == BeuiMessageAlign.end
-                ? Alignment.bottomRight
-                : Alignment.bottomLeft,
-            scale: s,
-            child: bubble,
-          ),
-        );
-      },
+      alignment: align == BeuiMessageAlign.end
+          ? Alignment.bottomRight
+          : Alignment.bottomLeft,
+      fromScale: 0.92,
+      child: bubble,
     );
   }
 }
@@ -250,13 +241,19 @@ class _BeuiMessageBubbleCollapsibleState
                     color: colors.mutedForeground,
                   ),
                 ),
-                Transform.rotate(
-                  angle: _open ? 3.14159 : 0,
-                  child: BeuiIcon(
-                    BeuiIcons.chevronDown,
-                    size: 14,
-                    color: colors.mutedForeground,
-                  ),
+                BeuiSpringBuilder(
+                  value: _open ? 1 : 0,
+                  spec: BeuiSpringSpec.swap,
+                  builder: (context, t) {
+                    return Transform.rotate(
+                      angle: t * 3.14159,
+                      child: BeuiIcon(
+                        BeuiIcons.chevronDown,
+                        size: 14,
+                        color: colors.mutedForeground,
+                      ),
+                    );
+                  },
                 ),
               ],
             ),

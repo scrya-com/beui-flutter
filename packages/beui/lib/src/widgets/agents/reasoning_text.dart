@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
@@ -34,48 +33,48 @@ class BeuiReasoningText extends StatefulWidget {
   State<BeuiReasoningText> createState() => _BeuiReasoningTextState();
 }
 
-class _BeuiReasoningTextState extends State<BeuiReasoningText> {
+class _BeuiReasoningTextState extends State<BeuiReasoningText>
+    with SingleTickerProviderStateMixin {
   int _index = 0;
-  Timer? _timer;
+  late final AnimationController _cycle;
 
   @override
   void initState() {
     super.initState();
+    _cycle = AnimationController(vsync: this, duration: widget.interval)
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          if (!mounted) return;
+          setState(() => _index = (_index + 1) % widget.phrases.length);
+          _cycle.forward(from: 0);
+        }
+      });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!TickerMode.valuesOf(context).enabled) {
-      _timer?.cancel();
-      _timer = null;
-    } else if (_timer == null) {
-      _arm();
+    final enabled = TickerMode.valuesOf(context).enabled &&
+        widget.phrases.length > 1 &&
+        !beuiReduceMotion(context);
+    if (enabled && !_cycle.isAnimating) {
+      _cycle.forward();
+    } else if (!enabled && _cycle.isAnimating) {
+      _cycle.stop();
     }
   }
 
   @override
   void didUpdateWidget(BeuiReasoningText oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.interval != widget.interval ||
-        oldWidget.phrases.length != widget.phrases.length) {
-      _arm();
+    if (oldWidget.interval != widget.interval) {
+      _cycle.duration = widget.interval;
     }
-  }
-
-  void _arm() {
-    _timer?.cancel();
-    if (widget.phrases.length < 2) return;
-    if (!mounted || !TickerMode.valuesOf(context).enabled) return;
-    _timer = Timer.periodic(widget.interval, (_) {
-      if (!mounted) return;
-      setState(() => _index = (_index + 1) % widget.phrases.length);
-    });
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _cycle.dispose();
     super.dispose();
   }
 
@@ -165,10 +164,10 @@ class _LetterState extends State<_Letter> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 280));
-    Future<void>.delayed(widget.delay, () {
-      if (mounted) _c.forward();
-    });
+    _c = AnimationController(
+      vsync: this,
+      duration: widget.delay + const Duration(milliseconds: 280),
+    )..forward();
   }
 
   @override
@@ -179,11 +178,17 @@ class _LetterState extends State<_Letter> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final start = widget.delay.inMilliseconds /
+        (widget.delay + const Duration(milliseconds: 280)).inMilliseconds;
+    final curve = CurvedAnimation(
+      parent: _c,
+      curve: Interval(start.clamp(0.0, 0.9), 1, curve: BeuiCurves.easeOut),
+    );
     return FadeTransition(
-      opacity: CurvedAnimation(parent: _c, curve: BeuiCurves.easeOut),
+      opacity: curve,
       child: SlideTransition(
         position: Tween(begin: const Offset(0, 0.4), end: Offset.zero)
-            .animate(CurvedAnimation(parent: _c, curve: BeuiCurves.easeOut)),
+            .animate(curve),
         child: BeuiTextShimmer(
           text: widget.char == ' ' ? '\u00A0' : widget.char,
           duration: widget.shimmer,
@@ -227,10 +232,11 @@ class _Scramble extends StatefulWidget {
   State<_Scramble> createState() => _ScrambleState();
 }
 
-class _ScrambleState extends State<_Scramble> {
+class _ScrambleState extends State<_Scramble>
+    with SingleTickerProviderStateMixin {
   late String _shown;
-  Timer? _timer;
   int _step = 0;
+  late final AnimationController _c;
   static const _glyphs = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789';
   final _rng = math.Random(4);
 
@@ -238,29 +244,33 @@ class _ScrambleState extends State<_Scramble> {
   void initState() {
     super.initState();
     _shown = widget.text;
-    _timer = Timer.periodic(const Duration(milliseconds: 32), (_) {
-      if (!mounted) return;
-      _step++;
-      if (_step > widget.text.length + 4) {
-        _timer?.cancel();
-        setState(() => _shown = widget.text);
-        return;
-      }
-      final buf = StringBuffer();
-      for (var i = 0; i < widget.text.length; i++) {
-        if (i < _step - 2 || widget.text[i] == ' ' || widget.text[i] == '…') {
-          buf.write(widget.text[i]);
-        } else {
-          buf.write(_glyphs[_rng.nextInt(_glyphs.length)]);
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 32),
+    )..addStatusListener((status) {
+        if (status != AnimationStatus.completed || !mounted) return;
+        _step++;
+        if (_step > widget.text.length + 4) {
+          setState(() => _shown = widget.text);
+          return;
         }
-      }
-      setState(() => _shown = buf.toString());
-    });
+        final buf = StringBuffer();
+        for (var i = 0; i < widget.text.length; i++) {
+          if (i < _step - 2 || widget.text[i] == ' ' || widget.text[i] == '…') {
+            buf.write(widget.text[i]);
+          } else {
+            buf.write(_glyphs[_rng.nextInt(_glyphs.length)]);
+          }
+        }
+        setState(() => _shown = buf.toString());
+        _c.forward(from: 0);
+      })
+      ..forward();
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _c.dispose();
     super.dispose();
   }
 

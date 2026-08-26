@@ -1,5 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 
+import '../../motion/reduce.dart';
+import '../../motion/spring_motion.dart';
+import '../../tokens/ease.dart';
 import '../../tokens/theme.dart';
 import '../icons.dart';
 
@@ -124,79 +129,141 @@ class _BeuiTodoListState extends State<BeuiTodoList> {
                       color: colors.mutedForeground,
                     ),
                   ),
-                  Transform.rotate(
-                    angle: _open ? 3.14159 : 0,
-                    child: BeuiIcon(
-                      BeuiIcons.chevronDown,
-                      size: 16,
-                      color: colors.mutedForeground,
-                    ),
+                  BeuiSpringBuilder(
+                    value: _open ? 1 : 0,
+                    spec: BeuiSpringSpec.swap,
+                    builder: (context, t) {
+                      return Transform.rotate(
+                        angle: t * math.pi,
+                        child: BeuiIcon(
+                          BeuiIcons.chevronDown,
+                          size: 16,
+                          color: colors.mutedForeground,
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
             ),
           ),
-          if (_open)
-            ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: widget.maxHeight),
-              child: ListView.builder(
-                shrinkWrap: true,
-                padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
-                itemCount: widget.items.length,
-                itemBuilder: (context, i) {
-                  final item = widget.items[i];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      spacing: 10,
-                      children: [
-                        _StatusMark(status: item.status, progress: item.progress),
-                        Expanded(
-                          child: Text(
-                            item.title,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: item.status == BeuiTodoStatus.cancelled
-                                  ? colors.mutedForeground
-                                  : colors.foreground,
-                              decoration: item.status == BeuiTodoStatus.cancelled
-                                  ? TextDecoration.lineThrough
-                                  : null,
+          ClipRect(
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 280),
+              curve: BeuiCurves.easeOut,
+              alignment: Alignment.topCenter,
+              child: _open
+                  ? ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: widget.maxHeight),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+                        itemCount: widget.items.length,
+                        itemBuilder: (context, i) {
+                          final item = widget.items[i];
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 8,
                             ),
-                          ),
-                        ),
-                        if (item.detail != null)
-                          Text(
-                            item.detail!,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: colors.mutedForeground,
+                            child: Row(
+                              spacing: 10,
+                              children: [
+                                _StatusMark(
+                                  status: item.status,
+                                  progress: item.progress,
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    item.title,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: item.status ==
+                                              BeuiTodoStatus.cancelled
+                                          ? colors.mutedForeground
+                                          : colors.foreground,
+                                      decoration: item.status ==
+                                              BeuiTodoStatus.cancelled
+                                          ? TextDecoration.lineThrough
+                                          : null,
+                                    ),
+                                  ),
+                                ),
+                                if (item.detail != null)
+                                  Text(
+                                    item.detail!,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: colors.mutedForeground,
+                                    ),
+                                  ),
+                              ],
                             ),
-                          ),
-                      ],
-                    ),
-                  );
-                },
-              ),
+                          );
+                        },
+                      ),
+                    )
+                  : const SizedBox(width: double.infinity, height: 0),
             ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _StatusMark extends StatelessWidget {
+class _StatusMark extends StatefulWidget {
   const _StatusMark({required this.status, this.progress});
   final BeuiTodoStatus status;
   final double? progress;
 
   @override
+  State<_StatusMark> createState() => _StatusMarkState();
+}
+
+class _StatusMarkState extends State<_StatusMark>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _spin;
+
+  @override
+  void initState() {
+    super.initState();
+    _spin = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncSpin();
+  }
+
+  @override
+  void didUpdateWidget(_StatusMark oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncSpin();
+  }
+
+  void _syncSpin() {
+    final spin = widget.status == BeuiTodoStatus.inProgress &&
+        widget.progress == null &&
+        !beuiReduceMotion(context);
+    if (spin && !_spin.isAnimating) _spin.repeat();
+    if (!spin && _spin.isAnimating) _spin.stop();
+  }
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = context.beuiColors;
-    final color = switch (status) {
+    final color = switch (widget.status) {
       BeuiTodoStatus.completed => const Color(0xFF10B981),
       BeuiTodoStatus.cancelled => colors.destructive,
       BeuiTodoStatus.inProgress => colors.foreground,
@@ -205,12 +272,22 @@ class _StatusMark extends StatelessWidget {
     return SizedBox(
       width: 20,
       height: 20,
-      child: CustomPaint(
-        painter: _TodoPainter(
-          status: status,
-          progress: ((progress ?? 0) / 100).clamp(0.0, 1.0),
-          color: color,
-        ),
+      child: AnimatedBuilder(
+        animation: _spin,
+        builder: (context, _) {
+          return Transform.rotate(
+            angle: widget.status == BeuiTodoStatus.inProgress
+                ? _spin.value * math.pi * 2
+                : 0,
+            child: CustomPaint(
+              painter: _TodoPainter(
+                status: widget.status,
+                progress: ((widget.progress ?? 0) / 100).clamp(0.0, 1.0),
+                color: color,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
