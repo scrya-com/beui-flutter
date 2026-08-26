@@ -70,6 +70,13 @@ const implemented = new Set([
   "agents/prompt-input",
   "agents/todo-list",
   "agents/message",
+  "agents/message-scroller",
+  "agents/citations",
+  "agents/streaming-response",
+  "agents/tool-result-terminal",
+  "agents/tool-result",
+  "agents/agent-activity-mixed",
+  "agents/agent-activity",
 ]);
 
 const title = (key) => {

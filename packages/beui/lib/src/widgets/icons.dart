@@ -247,6 +247,102 @@ class BeuiIcons {
     );
   }
 
+  static void copy(Canvas c, Size s, Paint p) {
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(8, 8, 12, 12),
+        const Radius.circular(2),
+      ),
+      p,
+    );
+    c.drawPath(
+      Path()
+        ..moveTo(16, 8)
+        ..lineTo(16, 4)
+        ..lineTo(4, 4)
+        ..lineTo(4, 16)
+        ..lineTo(8, 16),
+      p,
+    );
+  }
+
+  static void thumbsUp(Canvas c, Size s, Paint p) {
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(3, 12, 4, 8),
+        const Radius.circular(1),
+      ),
+      p,
+    );
+    c.drawPath(
+      Path()
+        ..moveTo(7, 20)
+        ..lineTo(18, 20)
+        ..lineTo(21, 12)
+        ..lineTo(12, 12)
+        ..lineTo(13, 7)
+        ..lineTo(10, 12)
+        ..lineTo(7, 12)
+        ..close(),
+      p,
+    );
+  }
+
+  static void thumbsDown(Canvas c, Size s, Paint p) {
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(17, 4, 4, 8),
+        const Radius.circular(1),
+      ),
+      p,
+    );
+    c.drawPath(
+      Path()
+        ..moveTo(17, 4)
+        ..lineTo(6, 4)
+        ..lineTo(3, 12)
+        ..lineTo(12, 12)
+        ..lineTo(11, 17)
+        ..lineTo(14, 12)
+        ..lineTo(17, 12)
+        ..close(),
+      p,
+    );
+  }
+
+  static void book(Canvas c, Size s, Paint p) {
+    c.drawPath(
+      Path()
+        ..moveTo(4, 19)
+        ..lineTo(4, 5)
+        ..lineTo(12, 8)
+        ..lineTo(20, 5)
+        ..lineTo(20, 19)
+        ..lineTo(12, 16)
+        ..close(),
+      p,
+    );
+    c.drawLine(const Offset(12, 8), const Offset(12, 16), p);
+  }
+
+  static void terminal(Canvas c, Size s, Paint p) {
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(3, 5, 18, 14),
+        const Radius.circular(2),
+      ),
+      p,
+    );
+    c.drawPath(
+      Path()
+        ..moveTo(7, 10)
+        ..lineTo(11, 12)
+        ..lineTo(7, 14),
+      p,
+    );
+    c.drawLine(const Offset(13, 15), const Offset(17, 15), p);
+  }
+
   static void rotateCcw(Canvas c, Size s, Paint p) {
     c.drawPath(
       Path()

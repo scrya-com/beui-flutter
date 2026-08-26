@@ -9,12 +9,29 @@ Port of beUI (`ui-components`) to Flutter. Catalog, motion tokens, and interacti
 flutter test
 flutter analyze
 
-# from apps/gallery
-flutter run -d chrome
-flutter run -d ios
+# from apps/gallery — Chrome, not web-server
+flutter run -d chrome --web-port 8095
 ```
 
-Do not run `flutter build` unless asked.
+Do not run `flutter build` unless asked. Do not use `-d web-server` for visual checks: it serves an empty document unless Dart Debug Chrome is attached.
+
+## Fix constraints on the spot
+
+When a constraint, assertion, frozen animation, stale process, or DevTools mismatch is detected, **stop the catalog work and fix it in the same change**. Do not document it for later, disable the motion to silence a test, or keep porting on top of a broken gallery.
+
+Already-hit constraints — treat a recurrence as a bug, not a given:
+
+| Detection | Fix immediately |
+|---|---|
+| `mouse_tracker.dart` `_debugDuringDeviceUpdate` | Never `setState` inside `MouseRegion`/`Listener` hover callbacks. Use `beuiAfterPointer`. |
+| Catalog or agent controls have no motion | Do not wrap previews in `TickerMode(enabled: false)` to pass tests. Convert `Timer`/`Future.delayed` to `AnimationController` so dispose is clean. |
+| `BeuiSpringBuilder` / pop-in never moves | A spring that starts at the target value is a no-op. Mount-only motion starts at 0 and `animateTo(1)` after the first frame (`BeuiPopIn`). |
+| DevTools shows light list rows / "Soon" / old chrome | A stale `flutter run` is still bound to `:8095`. Kill it, restart with **current** `apps/gallery`, confirm the screenshot is the card catalog. |
+| `flutter run -d web-server` paints a black/empty page | Switch to `-d chrome`. `web-server` is not a visual target. |
+| Tests fail on pending timers after dispose | Cancel every ticker in `dispose`. Do not freeze the whole tree. |
+| `defaultTargetPlatform` is Android on Flutter web | `kIsWeb` is hover-capable (`beuiHoverCapable`). |
+
+If DevTools, `flutter test`, or `flutter analyze` disagrees with the intended UI, the test or the widget is wrong — fix that widget before adding the next slug.
 
 ## Motion
 
@@ -24,10 +41,11 @@ Do not run `flutter build` unless asked.
 - Gate transform motion with `beuiReduceMotion`. Keep opacity/color.
 - Gate decorative hover (magnetic, tilt, 1.02 scale) with `beuiHoverCapable`.
 - Animate transform and opacity only. Blur ≤ 10px. Exits faster than entrances.
+- Agent surfaces must move: shimmer, progress grid, reasoning cycle, bubble pop, disclosure clip/size, status morphs, send/stop swap.
 
 ## Theme
 
-`BeuiTheme` + `BeuiColors` from `app/globals.css` / `lib/themes.ts`. Consume semantic colors (`background`, `foreground`, `primary`, …), never raw hex in widgets.
+`BeuiTheme` + `BeuiColors` from `app/globals.css` / `lib/themes.ts`. Consume semantic colors (`background`, `foreground`, `primary`, …), never raw hex in widgets. Gallery is dark-only (`#151515` / `#1C1C1C`).
 
 ## Catalog
 
@@ -38,6 +56,8 @@ Regenerate the gallery catalog after adding a key:
 ```bash
 bun tools/export-catalog.mjs
 ```
+
+Gallery cards are landing-style: live scaled preview, title, description. Agent pages group the same way as `beui.dev/components/agents`.
 
 ## API mapping
 

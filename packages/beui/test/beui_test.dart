@@ -162,6 +162,48 @@ void main() {
     });
   });
 
+  group('BeuiToolResult', () {
+    testWidgets('re-opens when a completed run starts again', (tester) async {
+      var open = false;
+      await tester.pumpWidget(
+        BeuiTheme.wrap(
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Center(
+              child: BeuiToolResult(
+                tool: 'test',
+                title: 'Done',
+                output: 'ok',
+                status: BeuiToolResultStatus.success,
+                open: open,
+                onOpenChanged: (v) => open = v,
+                collapseOnComplete: true,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpWidget(
+        BeuiTheme.wrap(
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Center(
+              child: BeuiToolResult(
+                tool: 'test',
+                title: 'Running',
+                output: '',
+                status: BeuiToolResultStatus.running,
+                open: open,
+                onOpenChanged: (v) => open = v,
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(open, isTrue);
+    });
+  });
+
   group('BeuiTodoList', () {
     testWidgets('re-opens when a completed plan starts a new lifecycle',
         (tester) async {

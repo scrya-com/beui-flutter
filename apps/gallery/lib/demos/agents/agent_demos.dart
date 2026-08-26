@@ -386,3 +386,365 @@ class MessageDemo extends StatelessWidget {
     );
   }
 }
+
+class MessageScrollerDemo extends StatelessWidget {
+  const MessageScrollerDemo({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 420,
+      child: BeuiMessageScroller(
+        height: 320,
+        children: [
+          BeuiMessageBubble(
+            align: BeuiMessageAlign.end,
+            variant: BeuiMessageBubbleVariant.solid,
+            child: Text('What should the first release include?'),
+          ),
+          BeuiMessageBubble(
+            align: BeuiMessageAlign.start,
+            variant: BeuiMessageBubbleVariant.soft,
+            child: Text('Start with the smallest workflow that still feels complete.'),
+          ),
+          BeuiMessageBubble(
+            align: BeuiMessageAlign.end,
+            variant: BeuiMessageBubbleVariant.solid,
+            child: Text('Include streaming and recovery states too.'),
+          ),
+          BeuiMessageBubble(
+            align: BeuiMessageAlign.start,
+            variant: BeuiMessageBubbleVariant.soft,
+            child: Text('Yes. Those states make the first version feel dependable.'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class CitationsDemo extends StatelessWidget {
+  const CitationsDemo({super.key});
+
+  static const items = [
+    BeuiCitationItem(
+      id: 'motion',
+      title: 'Motion documentation',
+      domain: 'motion.dev',
+      url: 'https://motion.dev/docs/react',
+    ),
+    BeuiCitationItem(
+      id: 'wai',
+      title: 'WAI accessibility patterns',
+      domain: 'w3.org',
+      url: 'https://www.w3.org/WAI/ARIA/apg/',
+    ),
+    BeuiCitationItem(
+      id: 'react',
+      title: 'React documentation',
+      domain: 'react.dev',
+      url: 'https://react.dev/learn',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.beuiColors;
+    return SizedBox(
+      width: 420,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text.rich(
+            TextSpan(
+              style: TextStyle(fontSize: 14, height: 1.55, color: colors.foreground),
+              children: const [
+                TextSpan(text: 'Use layout-aware motion for newly appended results '),
+                WidgetSpan(child: BeuiCitation(index: 1)),
+                TextSpan(text: ' and preserve accessible disclosure '),
+                WidgetSpan(child: BeuiCitation(index: 2)),
+                TextSpan(text: '.'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          const BeuiCitations(citations: items, initialOpen: true),
+        ],
+      ),
+    );
+  }
+}
+
+class StreamingResponseDemo extends StatefulWidget {
+  const StreamingResponseDemo({super.key});
+
+  @override
+  State<StreamingResponseDemo> createState() => _StreamingResponseDemoState();
+}
+
+class _StreamingResponseDemoState extends State<StreamingResponseDemo>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _clock;
+  int _chars = 0;
+  static const text =
+      'A streaming response can link directly to Motion\'s React guide while the rest of the answer continues to arrive.';
+
+  @override
+  void initState() {
+    super.initState();
+    _clock = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 18),
+    )..addStatusListener((status) {
+        if (status != AnimationStatus.completed || !mounted) return;
+        if (_chars >= text.length) return;
+        setState(() => _chars++);
+        if (_chars < text.length) _clock.forward(from: 0);
+      });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (TickerMode.valuesOf(context).enabled &&
+        _chars < text.length &&
+        !_clock.isAnimating) {
+      _clock.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _clock.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final complete = _chars >= text.length;
+    return SizedBox(
+      width: 420,
+      child: BeuiStreamingResponse(
+        status: complete
+            ? BeuiStreamingStatus.complete
+            : BeuiStreamingStatus.streaming,
+        copyText: text,
+        sources: complete
+            ? const [
+                BeuiCitationItem(
+                  id: 'motion-react',
+                  title: 'Motion for React',
+                  domain: 'motion.dev',
+                ),
+              ]
+            : const [],
+        child: Text(text.substring(0, _chars)),
+      ),
+    );
+  }
+}
+
+class ToolResultDemo extends StatefulWidget {
+  const ToolResultDemo({super.key});
+
+  @override
+  State<ToolResultDemo> createState() => _ToolResultDemoState();
+}
+
+class _ToolResultDemoState extends State<ToolResultDemo>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _clock;
+  int visible = 0;
+  static const lines = [
+    '\$ bun test tests/a11y.test.tsx',
+    'bun test v1.3.14',
+    '✓ StreamingResponse complete',
+    '✓ ToolApproval pending',
+    '✓ Citations expanded',
+    '49 pass · 0 fail',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _clock = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    )..addStatusListener((status) {
+        if (status != AnimationStatus.completed || !mounted) return;
+        if (visible >= lines.length) return;
+        setState(() => visible++);
+        if (visible < lines.length) _clock.forward(from: 0);
+      });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (TickerMode.valuesOf(context).enabled &&
+        visible < lines.length &&
+        !_clock.isAnimating) {
+      _clock.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _clock.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final running = visible < lines.length;
+    return SizedBox(
+      width: 480,
+      child: BeuiToolResult(
+        tool: 'terminal.run',
+        title: running ? 'Running accessibility tests' : 'Tests passed',
+        kind: BeuiToolResultKind.terminal,
+        status: running
+            ? BeuiToolResultStatus.running
+            : BeuiToolResultStatus.success,
+        meta: running ? null : '2.9s',
+        output: lines.take(visible).join('\n'),
+        collapseOnComplete: false,
+        maxHeight: 150,
+      ),
+    );
+  }
+}
+
+class AgentActivityDemo extends StatefulWidget {
+  const AgentActivityDemo({super.key});
+
+  @override
+  State<AgentActivityDemo> createState() => _AgentActivityDemoState();
+}
+
+class _AgentActivityDemoState extends State<AgentActivityDemo>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _clock;
+  int frame = 0;
+
+  static const frames = <List<BeuiAgentActivityItem>>[
+    [
+      BeuiAgentActivityItem.step(
+        id: 'brief',
+        label: 'Reading the launch brief',
+        status: BeuiAgentStepStatus.active,
+      ),
+    ],
+    [
+      BeuiAgentActivityItem.step(
+        id: 'brief',
+        label: 'Reading the launch brief',
+        status: BeuiAgentStepStatus.complete,
+      ),
+      BeuiAgentActivityItem.search(
+        id: 'search',
+        query: 'independent coffee roasters in Portland',
+      ),
+    ],
+    [
+      BeuiAgentActivityItem.step(
+        id: 'brief',
+        label: 'Reading the launch brief',
+        status: BeuiAgentStepStatus.complete,
+      ),
+      BeuiAgentActivityItem.search(
+        id: 'search',
+        query: 'independent coffee roasters in Portland',
+        results: [
+          BeuiAgentSearchResult(
+            id: 'heart',
+            title: 'Heart Coffee',
+            domain: 'heartroasters.com',
+          ),
+          BeuiAgentSearchResult(
+            id: 'coava',
+            title: 'Coava Coffee',
+            domain: 'coavacoffee.com',
+          ),
+        ],
+      ),
+    ],
+    [
+      BeuiAgentActivityItem.step(
+        id: 'brief',
+        label: 'Reading the launch brief',
+        status: BeuiAgentStepStatus.complete,
+      ),
+      BeuiAgentActivityItem.search(
+        id: 'search',
+        query: 'independent coffee roasters in Portland',
+        results: [
+          BeuiAgentSearchResult(
+            id: 'heart',
+            title: 'Heart Coffee',
+            domain: 'heartroasters.com',
+          ),
+        ],
+      ),
+      BeuiAgentActivityItem.tool(
+        id: 'read',
+        action: 'read',
+        target: 'campaign-notes.md',
+      ),
+      BeuiAgentActivityItem.tool(
+        id: 'edit',
+        action: 'edit',
+        target: 'launch-plan.ts',
+        additions: 42,
+        deletions: 8,
+      ),
+    ],
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _clock = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..addStatusListener((status) {
+        if (status != AnimationStatus.completed || !mounted) return;
+        if (frame >= frames.length - 1) return;
+        setState(() => frame++);
+        if (frame < frames.length - 1) _clock.forward(from: 0);
+      });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (TickerMode.valuesOf(context).enabled &&
+        frame < frames.length - 1 &&
+        !_clock.isAnimating) {
+      _clock.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _clock.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final complete = frame >= frames.length - 1;
+    return SizedBox(
+      width: 480,
+      child: BeuiAgentActivity(
+        items: frames[frame],
+        status: complete
+            ? BeuiAgentActivityStatus.complete
+            : BeuiAgentActivityStatus.working,
+        duration: frame * 2.4,
+        collapseOnComplete: false,
+        activeLabel: 'Working',
+      ),
+    );
+  }
+}

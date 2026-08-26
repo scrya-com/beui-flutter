@@ -26,4 +26,11 @@ final demoBuilders = <String, DemoBuilder>{
   'agents/prompt-input': () => const PromptInputDemo(),
   'agents/todo-list': () => const TodoListDemo(),
   'agents/message': () => const MessageDemo(),
+  'agents/message-scroller': () => const MessageScrollerDemo(),
+  'agents/citations': () => const CitationsDemo(),
+  'agents/streaming-response': () => const StreamingResponseDemo(),
+  'agents/tool-result-terminal': () => const ToolResultDemo(),
+  'agents/tool-result': () => const ToolResultDemo(),
+  'agents/agent-activity-mixed': () => const AgentActivityDemo(),
+  'agents/agent-activity': () => const AgentActivityDemo(),
 };
