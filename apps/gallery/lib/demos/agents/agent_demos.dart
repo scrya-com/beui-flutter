@@ -1688,88 +1688,38 @@ class _ToolApprovalDemoState extends State<ToolApprovalDemo>
     _toComplete.reset();
   }
 
-  void _replay() {
-    _toApproved.reset();
-    _toRunning.reset();
-    _toComplete.reset();
-    setState(() {
-      _status = BeuiToolApprovalStatus.pending;
-      _detailsOpen = true;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    final colors = context.beuiColors;
-    return SizedBox(
-      height: 360,
-      child: Stack(
-        children: [
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 512),
-              child: BeuiToolApproval(
-                tool: 'terminal.run',
-                title: _status == BeuiToolApprovalStatus.pending
-                    ? 'Allow this tool to run?'
-                    : 'Terminal access',
-                description:
-                    'The agent wants to run the project test suite in the current workspace.',
-                status: _status,
-                open: _detailsOpen,
-                onOpenChanged: (v) => setState(() => _detailsOpen = v),
-                parameters: const [
-                  BeuiToolApprovalParameter(
-                    id: 'command',
-                    label: 'Command',
-                    value: BeuiToolApprovalCode(
-                      code: 'bun test tests/a11y.test.tsx',
-                    ),
-                  ),
-                  BeuiToolApprovalParameter(
-                    id: 'directory',
-                    label: 'Directory',
-                    value: Text('ui-components'),
-                  ),
-                ],
-                onApprove: _approve,
-                onAlwaysAllow: _approve,
-                onDeny: () =>
-                    setState(() => _status = BeuiToolApprovalStatus.denied),
-              ),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 512),
+      child: BeuiToolApproval(
+        tool: 'terminal.run',
+        title: _status == BeuiToolApprovalStatus.pending
+            ? 'Allow this tool to run?'
+            : 'Terminal access',
+        description:
+            'The agent wants to run the project test suite in the current workspace.',
+        status: _status,
+        open: _detailsOpen,
+        onOpenChanged: (v) => setState(() => _detailsOpen = v),
+        parameters: const [
+          BeuiToolApprovalParameter(
+            id: 'command',
+            label: 'Command',
+            value: BeuiToolApprovalCode(
+              code: 'bun test tests/a11y.test.tsx',
             ),
           ),
-          Positioned(
-            left: 0,
-            bottom: 0,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _replay,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(0, 8, 12, 4),
-                child: Row(
-                  spacing: 6,
-                  children: [
-                    BeuiIcon(
-                      BeuiIcons.rotateCcw,
-                      size: 12,
-                      color: colors.mutedForeground,
-                    ),
-                    Text(
-                      'Replay',
-                      style: TextStyle(
-                        color: colors.mutedForeground,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          BeuiToolApprovalParameter(
+            id: 'directory',
+            label: 'Directory',
+            value: Text('ui-components'),
           ),
         ],
+        onApprove: _approve,
+        onAlwaysAllow: _approve,
+        onDeny: () =>
+            setState(() => _status = BeuiToolApprovalStatus.denied),
       ),
     );
   }

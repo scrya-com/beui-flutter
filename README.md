@@ -4,23 +4,25 @@ Animated Flutter widgets ported from [beUI](https://beui.dev). Same springs, sam
 
 This is a **new repository**, sibling to [`ui-components`](https://github.com/starc007/ui-components). The React docs site and shadcn registry stay there.
 
+Live gallery: [https://scrya-com.github.io/beui-flutter/](https://scrya-com.github.io/beui-flutter/)
+
 ## Status
 
-Wave 0+1 is in tree: motion kernel, theme (11 × light/dark), and the first form primitives.
+**72 of 124** catalog previews are live. The rest show as Soon.
 
-| Preview key | Widget |
-|---|---|
-| `motion/button-base` | `BeuiButton` |
-| `motion/button-stateful` | `BeuiStatefulButton` |
-| `motion/button-magnetic` | `BeuiMagneticButton` |
-| `motion/button-metallic` | `BeuiMetallicButton` |
-| `motion/switch` | `BeuiSwitch` |
-| `motion/checkbox` | `BeuiCheckbox` |
-| `motion/radio` | `BeuiRadioGroup` / `BeuiRadio` |
-| `motion/input` | `BeuiInput` |
-| `motion/tabs` | `BeuiTabs` |
+| Area | Live | Still Soon |
+|---|---|---|
+| **AI Agents** | Chat app, AI sidebar, messages, scroller, prompt input, todo list, code block, file diff, tool result (terminal), streaming response, image generation, tool approval, citations, mixed agent activity, thinking shimmer, agent progress, reasoning text | Approval card (questions / review), tool-result request, agent activity (text / steps / search / tools), agent trace |
+| **Components (motion)** | Buttons, switch, checkbox, radio, input, tabs, select, combobox, sliders (all five), wheel picker, accordion, tilt card, marquee, text/number motion, badges, action-swap, dock, tooltip, loader, expandable control, CTAs (arrow / hold / slide), theme toggle, bottom sheet, drawer, pull-to-refresh, scroll progress / reveal, shared-layout bg | Tables, morph select, gooey + morph popovers, context menu, morphing / center modals, bounce / animated sidebar, preview rail, toast stack, shader background, cylinder carousel, smooth-scroll / parallax / scroll-to |
+| **Blocks** | File upload, attachment upload | Masonry, notification stack, project folder, swap, dynamic island, command palette, morphing search, action bars, swipeable list, knockout bracket / wheel, prediction market, wallet, scheduler, OTP, signup, 404 variants |
 
-The gallery lists all **123** React preview keys. Unported entries show as Soon.
+Known limits (not Soon — live, but incomplete vs React):
+
+- **Prompt Input** plus-menu items (`Attach image`, `Use a skill`, `Add context`) are demo `onAction` labels. The React component has no file picker or skill runner either.
+- **Morphic tooltip** is a public-preview port. Licensed Pro registry JSON needs `BEUI_PRO_TOKEN`.
+- **Chat App** omits Approval Card (unported).
+- **Select / Combobox** on mobile: tap-to-open was broken when children were `const` (inherited `open` did not notify). Fixed — redeploy to see it.
+- **Tool Approval** on a narrow phone: a 360px preview stack plus two Replay controls sat on top of Allow / Deny. The card now sizes to its content; Replay sits below the well, not over the actions.
 
 ## Layout
 
@@ -70,7 +72,14 @@ flutter run -d ios                 # connected iPhone, or
 open -a Simulator && flutter run   # iOS Simulator
 ```
 
-Each demo has a **React ↗** link to the matching page on beui.dev.
+Physical iPhone (release):
+
+```bash
+cd apps/gallery
+flutter run --release -d 00008140-00161C440C33001C
+```
+
+Each demo has a **React ↗** link to the matching page on beui.dev. Agent demos have a **Replay** control under the preview well that remounts the example.
 
 Catalog **cards** pause off-screen tickers (`VisibleTicker`). Open a card for the full, copyable usage. Do not port `VisibleTicker` into an app unless you are also rendering a grid of live previews.
 
@@ -83,4 +92,4 @@ cd ../../apps/gallery && flutter analyze
 
 ## Parity
 
-100% means the Flutter widget **does the same thing** as the React component (API, physics, reduced motion, controlled state, gestures). It does not mean CSS pixels match Skia glyphs. See `AGENTS.md`.
+100% means the Flutter widget **does the same thing** as the React component (API, physics, reduced motion, controlled state, gestures). It does not mean CSS pixels match Skia glyphs. React milliseconds, delays, staggers, and spring k/c/m are the contract. See `AGENTS.md`.

@@ -537,13 +537,11 @@ class _DemoPageState extends State<_DemoPage> {
                       borderRadius: BorderRadius.circular(20),
                       child: ColoredBox(
                         color: colors.background,
-                        child: Stack(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 48,
-                              ),
+                              padding: const EdgeInsets.fromLTRB(16, 32, 16, 24),
                               child: Center(
                                 child: KeyedSubtree(
                                   key: ValueKey(_run),
@@ -552,31 +550,34 @@ class _DemoPageState extends State<_DemoPage> {
                               ),
                             ),
                             if (category == 'agents')
-                              Positioned(
-                                left: 12,
-                                bottom: 12,
-                                child: GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTap: () => setState(() => _run++),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8),
-                                    child: Row(
-                                      spacing: 6,
-                                      children: [
-                                        BeuiIcon(
-                                          BeuiIcons.rotateCcw,
-                                          size: 12,
-                                          color: colors.mutedForeground,
-                                        ),
-                                        Text(
-                                          'Replay',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: () => setState(() => _run++),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        spacing: 6,
+                                        children: [
+                                          BeuiIcon(
+                                            BeuiIcons.rotateCcw,
+                                            size: 12,
                                             color: colors.mutedForeground,
                                           ),
-                                        ),
-                                      ],
+                                          Text(
+                                            'Replay',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                              color: colors.mutedForeground,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
