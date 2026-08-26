@@ -880,9 +880,11 @@ class AgentActivityDemo extends StatefulWidget {
 }
 
 class _AgentActivityDemoState extends State<AgentActivityDemo>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _clock;
+  late final AnimationController _done;
   int frame = 0;
+  bool complete = false;
 
   static const frames = <List<BeuiAgentActivityItem>>[
     [
@@ -923,7 +925,13 @@ class _AgentActivityDemoState extends State<AgentActivityDemo>
             title: 'Coava Coffee',
             domain: 'coavacoffee.com',
           ),
+          BeuiAgentSearchResult(
+            id: 'upper-left',
+            title: 'Upper Left Roasters',
+            domain: 'upperleftroasters.com',
+          ),
         ],
+        moreCount: 5,
       ),
     ],
     [
@@ -941,7 +949,52 @@ class _AgentActivityDemoState extends State<AgentActivityDemo>
             title: 'Heart Coffee',
             domain: 'heartroasters.com',
           ),
+          BeuiAgentSearchResult(
+            id: 'coava',
+            title: 'Coava Coffee',
+            domain: 'coavacoffee.com',
+          ),
+          BeuiAgentSearchResult(
+            id: 'upper-left',
+            title: 'Upper Left Roasters',
+            domain: 'upperleftroasters.com',
+          ),
         ],
+        moreCount: 5,
+      ),
+      BeuiAgentActivityItem.tool(
+        id: 'read',
+        action: 'read',
+        target: 'campaign-notes.md',
+      ),
+    ],
+    [
+      BeuiAgentActivityItem.step(
+        id: 'brief',
+        label: 'Reading the launch brief',
+        status: BeuiAgentStepStatus.complete,
+      ),
+      BeuiAgentActivityItem.search(
+        id: 'search',
+        query: 'independent coffee roasters in Portland',
+        results: [
+          BeuiAgentSearchResult(
+            id: 'heart',
+            title: 'Heart Coffee',
+            domain: 'heartroasters.com',
+          ),
+          BeuiAgentSearchResult(
+            id: 'coava',
+            title: 'Coava Coffee',
+            domain: 'coavacoffee.com',
+          ),
+          BeuiAgentSearchResult(
+            id: 'upper-left',
+            title: 'Upper Left Roasters',
+            domain: 'upperleftroasters.com',
+          ),
+        ],
+        moreCount: 5,
       ),
       BeuiAgentActivityItem.tool(
         id: 'read',
@@ -955,6 +1008,16 @@ class _AgentActivityDemoState extends State<AgentActivityDemo>
         additions: 42,
         deletions: 8,
       ),
+      BeuiAgentActivityItem.tool(
+        id: 'run',
+        action: 'run',
+        target: 'bun test launch',
+      ),
+      BeuiAgentActivityItem.step(
+        id: 'verify',
+        label: 'Checking the final campaign plan',
+        status: BeuiAgentStepStatus.complete,
+      ),
     ],
   ];
 
@@ -963,18 +1026,36 @@ class _AgentActivityDemoState extends State<AgentActivityDemo>
     super.initState();
     _clock = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 1050),
     )..addStatusListener((status) {
         if (status != AnimationStatus.completed || !mounted) return;
         if (frame >= frames.length - 1) return;
         setState(() => frame++);
-        if (frame < frames.length - 1) _clock.forward(from: 0);
+        if (frame < frames.length - 1) {
+          _clock.duration = Duration(milliseconds: frame == 0 ? 850 : 1050);
+          _clock.forward(from: 0);
+        } else {
+          _done.forward();
+        }
+      });
+    _done = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..addStatusListener((status) {
+        if (status == AnimationStatus.completed && mounted) {
+          setState(() => complete = true);
+        }
       });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (beuiReduceMotion(context) && !complete) {
+      frame = frames.length - 1;
+      complete = true;
+      return;
+    }
     if (TickerMode.valuesOf(context).enabled &&
         frame < frames.length - 1 &&
         !_clock.isAnimating) {
@@ -985,22 +1066,24 @@ class _AgentActivityDemoState extends State<AgentActivityDemo>
   @override
   void dispose() {
     _clock.dispose();
+    _done.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final complete = frame >= frames.length - 1;
     return SizedBox(
       width: 480,
+      height: 330,
       child: BeuiAgentActivity(
         items: frames[frame],
         status: complete
             ? BeuiAgentActivityStatus.complete
             : BeuiAgentActivityStatus.working,
-        duration: frame * 2.4,
-        collapseOnComplete: false,
-        activeLabel: 'Working',
+        duration: 5.1,
+        initialOpen: beuiReduceMotion(context),
+        collapseOnComplete: !beuiReduceMotion(context),
+        maxHeight: 220,
       ),
     );
   }
@@ -1162,54 +1245,83 @@ class ImageGenerationDemo extends StatefulWidget {
 }
 
 class _ImageGenerationDemoState extends State<ImageGenerationDemo>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _clock;
+    with TickerProviderStateMixin {
+  late final AnimationController _toGenerating;
+  late final AnimationController _toRefining;
+  late final AnimationController _toComplete;
   BeuiImageGenerationStatus _status = BeuiImageGenerationStatus.queued;
-
-  static const _steps = [
-    BeuiImageGenerationStatus.queued,
-    BeuiImageGenerationStatus.generating,
-    BeuiImageGenerationStatus.refining,
-    BeuiImageGenerationStatus.complete,
-  ];
 
   @override
   void initState() {
     super.initState();
-    _clock = AnimationController(
+    _toGenerating = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )
-      ..addStatusListener((s) {
+      duration: const Duration(milliseconds: 500),
+    )..addStatusListener((s) {
         if (s == AnimationStatus.completed && mounted) {
-          final i = _steps.indexOf(_status);
-          if (i < _steps.length - 1) {
-            setState(() => _status = _steps[i + 1]);
-            _clock.forward(from: 0);
-          }
+          setState(() => _status = BeuiImageGenerationStatus.generating);
+          _toRefining.forward();
         }
-      })
-      ..forward();
+      });
+    _toRefining = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2500),
+    )..addStatusListener((s) {
+        if (s == AnimationStatus.completed && mounted) {
+          setState(() => _status = BeuiImageGenerationStatus.refining);
+          _toComplete.forward();
+        }
+      });
+    _toComplete = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..addStatusListener((s) {
+        if (s == AnimationStatus.completed && mounted) {
+          setState(() => _status = BeuiImageGenerationStatus.complete);
+        }
+      });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (beuiReduceMotion(context)) {
+      _status = BeuiImageGenerationStatus.complete;
+      return;
+    }
+    if (TickerMode.valuesOf(context).enabled &&
+        _status == BeuiImageGenerationStatus.queued &&
+        !_toGenerating.isAnimating) {
+      _toGenerating.forward();
+    }
   }
 
   @override
   void dispose() {
-    _clock.dispose();
+    _toGenerating.dispose();
+    _toRefining.dispose();
+    _toComplete.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 360,
-      child: BeuiImageGeneration(
-        status: _status,
-        prompt: 'A quiet valley at dusk',
-        resolution: '800×600',
-        child: const CustomPaint(
-          painter: _DemoArtPainter(),
-          child: SizedBox.expand(),
-        ),
+    return BeuiImageGeneration(
+      label: 'A quiet mountain landscape at sunset',
+      prompt: 'a quiet mountain landscape at sunset',
+      resolution: '1024 × 1024',
+      status: _status,
+      onRetry: () {
+        setState(() => _status = BeuiImageGenerationStatus.queued);
+        _toGenerating
+          ..reset()
+          ..forward();
+        _toRefining.reset();
+        _toComplete.reset();
+      },
+      child: const CustomPaint(
+        painter: _DemoArtPainter(),
+        child: SizedBox.expand(),
       ),
     );
   }
@@ -1249,4 +1361,148 @@ class _DemoArtPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class ToolApprovalDemo extends StatefulWidget {
+  const ToolApprovalDemo({super.key});
+
+  @override
+  State<ToolApprovalDemo> createState() => _ToolApprovalDemoState();
+}
+
+class _ToolApprovalDemoState extends State<ToolApprovalDemo>
+    with TickerProviderStateMixin {
+  BeuiToolApprovalStatus _status = BeuiToolApprovalStatus.pending;
+  bool _detailsOpen = true;
+  late final AnimationController _toApproved;
+  late final AnimationController _toRunning;
+  late final AnimationController _toComplete;
+
+  @override
+  void initState() {
+    super.initState();
+    _toApproved = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..addStatusListener((s) {
+        if (s == AnimationStatus.completed && mounted) {
+          setState(() => _status = BeuiToolApprovalStatus.approved);
+          _toRunning.forward();
+        }
+      });
+    _toRunning = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 550),
+    )..addStatusListener((s) {
+        if (s == AnimationStatus.completed && mounted) {
+          setState(() => _status = BeuiToolApprovalStatus.running);
+          _toComplete.forward();
+        }
+      });
+    _toComplete = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1050),
+    )..addStatusListener((s) {
+        if (s == AnimationStatus.completed && mounted) {
+          setState(() => _status = BeuiToolApprovalStatus.complete);
+        }
+      });
+  }
+
+  @override
+  void dispose() {
+    _toApproved.dispose();
+    _toRunning.dispose();
+    _toComplete.dispose();
+    super.dispose();
+  }
+
+  void _approve() {
+    setState(() => _status = BeuiToolApprovalStatus.approving);
+    _toApproved.forward(from: 0);
+    _toRunning.reset();
+    _toComplete.reset();
+  }
+
+  void _replay() {
+    _toApproved.reset();
+    _toRunning.reset();
+    _toComplete.reset();
+    setState(() {
+      _status = BeuiToolApprovalStatus.pending;
+      _detailsOpen = true;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.beuiColors;
+    return SizedBox(
+      height: 360,
+      child: Stack(
+        children: [
+          Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 512),
+              child: BeuiToolApproval(
+                tool: 'terminal.run',
+                title: _status == BeuiToolApprovalStatus.pending
+                    ? 'Allow this tool to run?'
+                    : 'Terminal access',
+                description:
+                    'The agent wants to run the project test suite in the current workspace.',
+                status: _status,
+                open: _detailsOpen,
+                onOpenChanged: (v) => setState(() => _detailsOpen = v),
+                parameters: const [
+                  BeuiToolApprovalParameter(
+                    id: 'command',
+                    label: 'Command',
+                    value: BeuiToolApprovalCode(
+                      code: 'bun test tests/a11y.test.tsx',
+                    ),
+                  ),
+                  BeuiToolApprovalParameter(
+                    id: 'directory',
+                    label: 'Directory',
+                    value: Text('ui-components'),
+                  ),
+                ],
+                onApprove: _approve,
+                onAlwaysAllow: _approve,
+                onDeny: () =>
+                    setState(() => _status = BeuiToolApprovalStatus.denied),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            bottom: 0,
+            child: GestureDetector(
+              onTap: _replay,
+              child: Row(
+                spacing: 6,
+                children: [
+                  BeuiIcon(
+                    BeuiIcons.rotateCcw,
+                    size: 12,
+                    color: colors.mutedForeground,
+                  ),
+                  Text(
+                    'Replay',
+                    style: TextStyle(
+                      color: colors.mutedForeground,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

@@ -58,30 +58,40 @@ class _BeuiGalleryAppState extends State<BeuiGalleryApp> {
                 fontSize: 14,
                 height: 1.45,
               ),
-              child: Column(
-                children: [
-                  _SiteHeader(
-                    category: category,
-                    colorTheme: colorTheme,
-                    onCategory: (v) => setState(() {
-                      category = v;
-                      selectedKey = null;
-                    }),
-                    onColorTheme: (t) => setState(() => colorTheme = t),
-                  ),
-                  Expanded(
-                    child: selectedKey == null
-                        ? _CatalogBody(
-                            category: category,
-                            onSelect: (k) => setState(() => selectedKey = k),
-                          )
-                        : _DemoPage(
-                            entry: catalog.firstWhere((e) => e.key == selectedKey),
-                            category: category,
-                            onBack: () => setState(() => selectedKey = null),
-                          ),
-                  ),
-                ],
+              child: BeuiKeyboardAvoid(
+                child: Column(
+                  children: [
+                    _SiteHeader(
+                      category: category,
+                      colorTheme: colorTheme,
+                      onCategory: (v) => setState(() {
+                        category = v;
+                        selectedKey = null;
+                      }),
+                      onColorTheme: (t) => setState(() => colorTheme = t),
+                    ),
+                    Expanded(
+                      child: NotificationListener<UserScrollNotification>(
+                        onNotification: (n) {
+                          if (n.direction != ScrollDirection.idle) {
+                            FocusManager.instance.primaryFocus?.unfocus();
+                          }
+                          return false;
+                        },
+                        child: selectedKey == null
+                            ? _CatalogBody(
+                                category: category,
+                                onSelect: (k) => setState(() => selectedKey = k),
+                              )
+                            : _DemoPage(
+                                entry: catalog.firstWhere((e) => e.key == selectedKey),
+                                category: category,
+                                onBack: () => setState(() => selectedKey = null),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

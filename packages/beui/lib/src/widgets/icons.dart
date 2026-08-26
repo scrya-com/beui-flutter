@@ -435,6 +435,70 @@ class BeuiIcons {
     );
   }
 
+  static void globe(Canvas c, Size s, Paint p) {
+    c.drawCircle(const Offset(12, 12), 9, p);
+    c.drawOval(
+      Rect.fromCenter(center: const Offset(12, 12), width: 8, height: 18),
+      p,
+    );
+    c.drawLine(const Offset(3, 12), const Offset(21, 12), p);
+  }
+
+  static void circle(Canvas c, Size s, Paint p) {
+    c.drawCircle(const Offset(12, 12), 8, p);
+  }
+
+  static void fileText(Canvas c, Size s, Paint p) {
+    c.drawPath(
+      Path()
+        ..moveTo(14, 2)
+        ..lineTo(6, 2)
+        ..lineTo(6, 22)
+        ..lineTo(18, 22)
+        ..lineTo(18, 8)
+        ..close(),
+      p,
+    );
+    c.drawLine(const Offset(14, 2), const Offset(14, 8), p);
+    c.drawLine(const Offset(8, 13), const Offset(16, 13), p);
+    c.drawLine(const Offset(8, 17), const Offset(16, 17), p);
+  }
+
+  static void pencil(Canvas c, Size s, Paint p) {
+    c.drawPath(
+      Path()
+        ..moveTo(12, 20)
+        ..lineTo(20, 12)
+        ..lineTo(16, 8)
+        ..lineTo(8, 16)
+        ..lineTo(7, 21)
+        ..close(),
+      p,
+    );
+    c.drawLine(const Offset(14, 10), const Offset(18, 14), p);
+  }
+
+  static void wrench(Canvas c, Size s, Paint p) {
+    c.drawPath(
+      Path()
+        ..moveTo(14.7, 6.3)
+        ..lineTo(17, 4)
+        ..lineTo(20, 7)
+        ..lineTo(17.7, 9.3)
+        ..lineTo(11, 16)
+        ..lineTo(8, 13)
+        ..close(),
+      p,
+    );
+    c.drawLine(const Offset(8, 13), const Offset(4, 17), p);
+  }
+
+  static void alertCircle(Canvas c, Size s, Paint p) {
+    c.drawCircle(const Offset(12, 12), 9, p);
+    c.drawLine(const Offset(12, 8), const Offset(12, 12), p);
+    c.drawCircle(const Offset(12, 16), 0.6, p);
+  }
+
   static void rotateCcw(Canvas c, Size s, Paint p) {
     c.drawPath(
       Path()
@@ -452,6 +516,171 @@ class BeuiIcons {
         ..lineTo(3, 6)
         ..moveTo(3, 12)
         ..lineTo(8, 12),
+      p,
+    );
+  }
+
+  static void uploadCloud(Canvas c, Size s, Paint p) {
+    c.drawPath(
+      Path()
+        ..moveTo(4, 14)
+        ..cubicTo(4, 11.5, 6, 10, 8.5, 10.4)
+        ..cubicTo(9, 7.5, 11, 6, 13.5, 6)
+        ..cubicTo(16.5, 6, 18.5, 8.2, 19, 11)
+        ..cubicTo(21, 11.2, 22, 13, 22, 14.8)
+        ..cubicTo(22, 16.8, 20.4, 18.5, 18, 18.5)
+        ..lineTo(8, 18.5)
+        ..cubicTo(5.6, 18.5, 4, 16.7, 4, 14),
+      p,
+    );
+    c.drawLine(const Offset(12, 12), const Offset(12, 21), p);
+    c.drawPath(
+      Path()
+        ..moveTo(9, 15)
+        ..lineTo(12, 12)
+        ..lineTo(15, 15),
+      p,
+    );
+  }
+
+  static void file(Canvas c, Size s, Paint p) {
+    c.drawPath(
+      Path()
+        ..moveTo(14, 2)
+        ..lineTo(6, 2)
+        ..lineTo(6, 22)
+        ..lineTo(18, 22)
+        ..lineTo(18, 8)
+        ..close(),
+      p,
+    );
+    c.drawLine(const Offset(14, 2), const Offset(14, 8), p);
+    c.drawLine(const Offset(14, 8), const Offset(18, 8), p);
+  }
+
+  static void fileImage(Canvas c, Size s, Paint p) {
+    file(c, s, p);
+    c.drawCircle(const Offset(10, 13), 1.4, p);
+    c.drawPath(
+      Path()
+        ..moveTo(8, 19)
+        ..lineTo(11, 15)
+        ..lineTo(13.5, 17.5)
+        ..lineTo(15, 16)
+        ..lineTo(18, 19),
+      p,
+    );
+  }
+
+  static void fileVideo(Canvas c, Size s, Paint p) {
+    file(c, s, p);
+    c.drawPath(
+      Path()
+        ..moveTo(10, 12)
+        ..lineTo(10, 18)
+        ..lineTo(16, 15)
+        ..close(),
+      p,
+    );
+  }
+
+  static void fileAudio(Canvas c, Size s, Paint p) {
+    file(c, s, p);
+    c.drawLine(const Offset(10, 18), const Offset(10, 13), p);
+    c.drawLine(const Offset(14, 18), const Offset(14, 11), p);
+    c.drawLine(const Offset(10, 18), const Offset(14, 18), p);
+  }
+
+  static void fileArchive(Canvas c, Size s, Paint p) {
+    file(c, s, p);
+    c.drawLine(const Offset(10, 6), const Offset(10, 8), p);
+    c.drawLine(const Offset(12, 8), const Offset(12, 10), p);
+    c.drawLine(const Offset(10, 10), const Offset(10, 12), p);
+    c.drawLine(const Offset(12, 12), const Offset(12, 14), p);
+  }
+
+  static void paperclip(Canvas c, Size s, Paint p) {
+    c.drawPath(
+      Path()
+        ..moveTo(21.4, 11.6)
+        ..lineTo(12.1, 20.9)
+        ..cubicTo(10.2, 22.8, 7.1, 22.8, 5.2, 20.9)
+        ..cubicTo(3.3, 19, 3.3, 15.9, 5.2, 14)
+        ..lineTo(15.5, 3.7)
+        ..cubicTo(16.8, 2.4, 18.9, 2.4, 20.2, 3.7)
+        ..cubicTo(21.5, 5, 21.5, 7.1, 20.2, 8.4)
+        ..lineTo(10.6, 18)
+        ..cubicTo(10, 18.6, 8.9, 18.6, 8.3, 18)
+        ..cubicTo(7.7, 17.4, 7.7, 16.3, 8.3, 15.7)
+        ..lineTo(16.8, 7.2),
+      p,
+    );
+  }
+
+  static void mic(Canvas c, Size s, Paint p) {
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(9, 2, 6, 12),
+        const Radius.circular(3),
+      ),
+      p,
+    );
+    c.drawPath(
+      Path()
+        ..moveTo(5, 11)
+        ..cubicTo(5, 15, 8, 18, 12, 18)
+        ..cubicTo(16, 18, 19, 15, 19, 11),
+      p,
+    );
+    c.drawLine(const Offset(12, 18), const Offset(12, 22), p);
+    c.drawLine(const Offset(8, 22), const Offset(16, 22), p);
+  }
+
+  static void play(Canvas c, Size s, Paint p) {
+    c.drawPath(
+      Path()
+        ..moveTo(8, 5)
+        ..lineTo(19, 12)
+        ..lineTo(8, 19)
+        ..close(),
+      p,
+    );
+  }
+
+  static void pause(Canvas c, Size s, Paint p) {
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(6, 4, 4, 16),
+        const Radius.circular(1),
+      ),
+      p,
+    );
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(14, 4, 4, 16),
+        const Radius.circular(1),
+      ),
+      p,
+    );
+  }
+
+  static void shieldCheck(Canvas c, Size s, Paint p) {
+    c.drawPath(
+      Path()
+        ..moveTo(12, 2)
+        ..lineTo(20, 6)
+        ..lineTo(20, 12)
+        ..cubicTo(20, 17, 16.5, 20.5, 12, 22)
+        ..cubicTo(7.5, 20.5, 4, 17, 4, 12)
+        ..lineTo(4, 6)
+        ..close(),
+      p,
+    );
+    c.drawPath(
+      Path()
+        ..moveTo(9, 12)
+        ..lineTo(11, 14)
+        ..lineTo(15.5, 9.5),
       p,
     );
   }

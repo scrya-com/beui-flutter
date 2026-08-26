@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'demos/agents/agent_demos.dart';
+import 'demos/blocks/file_upload_demos.dart';
 import 'demos/motion/button_demos.dart';
 import 'demos/motion/form_demos.dart';
 import 'demos/motion/tooltip_demos.dart';
@@ -38,4 +39,7 @@ final demoBuilders = <String, DemoBuilder>{
   'agents/code-block': () => const CodeBlockDemo(),
   'agents/file-diff': () => const FileDiffDemo(),
   'agents/image-generation': () => const ImageGenerationDemo(),
+  'agents/tool-approval': () => const ToolApprovalDemo(),
+  'blocks/file-upload': () => const FileUploadDemo(),
+  'blocks/attachment-upload': () => const AttachmentUploadDemo(),
 };

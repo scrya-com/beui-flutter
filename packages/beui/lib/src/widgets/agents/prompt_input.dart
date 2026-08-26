@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import '../../motion/keyboard.dart';
 import '../../tokens/ease.dart';
 import '../../tokens/theme.dart';
 import '../icons.dart';
@@ -85,7 +86,10 @@ class _BeuiPromptInputState extends State<BeuiPromptInput> {
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.value ?? widget.initialValue);
-    _focus = FocusNode();
+    _focus = FocusNode()
+      ..addListener(() {
+        if (_focus.hasFocus) beuiRevealFocused(context);
+      });
     _model = widget.initialModel ??
         widget.model ??
         (widget.models.isNotEmpty ? widget.models.first.value : '');
@@ -208,6 +212,7 @@ class _BeuiPromptInputState extends State<BeuiPromptInput> {
                     EditableText(
                       controller: _controller,
                       focusNode: _focus,
+                      scrollPadding: beuiKeyboardScrollPadding,
                       maxLines: 8,
                       minLines: 2,
                       style: TextStyle(fontSize: 15, color: colors.foreground),

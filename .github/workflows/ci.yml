@@ -1,0 +1,160 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Test and analyze
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.44.1"
+          channel: stable
+          cache: true
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Test package
+        working-directory: packages/beui
+        run: flutter test
+
+      - name: Analyze package
+        working-directory: packages/beui
+        run: flutter analyze --no-fatal-infos
+
+      - name: Test gallery
+        working-directory: apps/gallery
+        run: flutter test
+
+      - name: Analyze gallery
+        working-directory: apps/gallery
+        run: flutter analyze --no-fatal-infos
+
+  gallery:
+    name: Gallery demo page
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.44.1"
+          channel: stable
+          cache: true
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Build Flutter web gallery
+        working-directory: apps/gallery
+        env:
+          BASE_HREF: /${{ github.event.repository.name }}/
+        run: flutter build web --release --no-source-maps --base-href "$BASE_HREF"
+
+      - name: Stage downloadable demo
+        env:
+          REPO: ${{ github.event.repository.name }}
+        run: |
+          stage="$RUNNER_TEMP/gallery-demo"
+          mkdir -p "$stage/$REPO"
+          cp -R apps/gallery/build/web/. "$stage/$REPO/"
+          cp tools/serve-gallery-artifact.py "$stage/serve.py"
+          cat > "$stage/index.html" <<EOF
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta http-equiv="refresh" content="0; url=${REPO}/">
+            <title>beUI Flutter gallery</title>
+            <style>
+              html, body { background: #151515; color: #e6e6e6; font: 14px/1.45 system-ui, sans-serif; }
+              a { color: inherit; }
+            </style>
+          </head>
+          <body>
+            <p><a href="${REPO}/">Open the beUI gallery</a></p>
+            <p>Or run <code>python3 serve.py</code> and open the same link.</p>
+          </body>
+          </html>
+          EOF
+          cat > "$stage/README.txt" <<EOF
+          beUI Flutter gallery
+          ====================
+
+          This artifact is a static Flutter web build of apps/gallery.
+
+          Local preview
+            python3 serve.py
+            open http://127.0.0.1:8080/${REPO}/
+
+          The server must be the folder that contains this README. The app's
+          <base href="/${REPO}/"> matches GitHub Pages and that local URL.
+
+          Commit: ${GITHUB_SHA}
+          Run:    ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          EOF
+
+      - name: Upload gallery demo artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: beui-gallery
+          path: ${{ runner.temp }}/gallery-demo
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload GitHub Pages artifact
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/gallery/build/web
+
+      - name: Summarize
+        env:
+          REPO: ${{ github.event.repository.name }}
+          PAGES: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+        run: |
+          {
+            echo "## Gallery demo"
+            echo
+            echo "- Download the **beui-gallery** artifact from this run."
+            echo "- Unzip, then \`python3 serve.py\` and open \`http://127.0.0.1:8080/${REPO}/\`."
+            if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+              echo "- Live after Pages deploy: ${PAGES}"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  pages:
+    name: Deploy GitHub Pages
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: gallery
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deploy
+        uses: actions/deploy-pages@v4

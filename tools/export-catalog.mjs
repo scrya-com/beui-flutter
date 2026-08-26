@@ -80,7 +80,10 @@ const implemented = new Set([
   "agents/code-block",
   "agents/file-diff",
   "agents/image-generation",
+  "agents/tool-approval",
   "motion/morphic-tooltip",
+  "blocks/file-upload",
+  "blocks/attachment-upload",
 ]);
 
 /** Gallery-only ports (Pro or not in the React preview index). */

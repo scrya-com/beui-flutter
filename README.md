@@ -51,13 +51,23 @@ BeuiSwitch(
 )
 ```
 
+## Gallery demo (CI artifact + Pages)
+
+Each push and pull request builds the Flutter **web** gallery and uploads a **`beui-gallery`** artifact. On `main`, that build is also deployed to GitHub Pages.
+
+- Live: [https://scrya-com.github.io/beui-flutter/](https://scrya-com.github.io/beui-flutter/)
+- Artifact: Actions → latest run → `beui-gallery`. Unzip, then `python3 serve.py` and open `http://127.0.0.1:8080/beui-flutter/`.
+
+Do **not** add a custom domain in GitHub Pages unless you own the hostname. The default `*.github.io` URL is enough. Source must be **GitHub Actions**, not “Deploy from a branch”.
+
 ## Run the gallery
 
 ```bash
 cd apps/gallery
 flutter pub get
 flutter run -d chrome
-flutter run -d ios
+flutter run -d ios                 # connected iPhone, or
+open -a Simulator && flutter run   # iOS Simulator
 ```
 
 Each demo has a **React ↗** link to the matching page on beui.dev.

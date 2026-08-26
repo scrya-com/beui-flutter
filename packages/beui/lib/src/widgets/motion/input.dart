@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../../motion/keyboard.dart';
 import '../../motion/reduce.dart';
 import '../../tokens/theme.dart';
 import '../icons.dart';
@@ -58,7 +59,11 @@ class _BeuiInputState extends State<BeuiInput>
     super.initState();
     _controller =
         TextEditingController(text: widget.value ?? widget.initialValue);
-    _focus = FocusNode()..addListener(() => setState(() {}));
+    _focus = FocusNode()
+      ..addListener(() {
+        if (mounted) setState(() {});
+        if (_focus.hasFocus) beuiRevealFocused(context);
+      });
     _shake = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 450),
@@ -180,6 +185,7 @@ class _BeuiInputState extends State<BeuiInput>
                         EditableText(
                           controller: _controller,
                           focusNode: _focus,
+                          scrollPadding: beuiKeyboardScrollPadding,
                           readOnly: !widget.enabled,
                           style: TextStyle(
                             fontSize: 16,

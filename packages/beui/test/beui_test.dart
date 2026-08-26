@@ -38,6 +38,72 @@ void main() {
     });
   });
 
+  group('BeuiImageGeneration', () {
+    testWidgets('shows status, quoted prompt, and resolution chip',
+        (tester) async {
+      await tester.pumpWidget(
+        BeuiTheme.wrap(
+          child: const Directionality(
+            textDirection: TextDirection.ltr,
+            child: BeuiImageGeneration(
+              status: BeuiImageGenerationStatus.refining,
+              prompt: 'a quiet mountain landscape at sunset',
+              resolution: '1024 × 1024',
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Refining details'), findsOneWidget);
+      expect(find.text('“a quiet mountain landscape at sunset”'), findsOneWidget);
+      expect(find.text('1024 × 1024'), findsOneWidget);
+    });
+  });
+
+  group('BeuiAgentActivity', () {
+    testWidgets('working uses a derived live label; complete uses a summary',
+        (tester) async {
+      await tester.pumpWidget(
+        BeuiTheme.wrap(
+          child: const Directionality(
+            textDirection: TextDirection.ltr,
+            child: BeuiAgentActivity(
+              status: BeuiAgentActivityStatus.working,
+              items: [
+                BeuiAgentActivityItem.search(
+                  id: 's',
+                  query: 'portland coffee',
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Searching the web…'), findsOneWidget);
+
+      await tester.pumpWidget(
+        BeuiTheme.wrap(
+          child: const Directionality(
+            textDirection: TextDirection.ltr,
+            child: BeuiAgentActivity(
+              status: BeuiAgentActivityStatus.complete,
+              duration: 5.1,
+              initialOpen: true,
+              collapseOnComplete: false,
+              items: [
+                BeuiAgentActivityItem.step(
+                  id: 'a',
+                  label: 'Done',
+                  status: BeuiAgentStepStatus.complete,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Thought for 5s'), findsOneWidget);
+    });
+  });
+
   group('BeuiAgentProgress', () {
     testWidgets('formats 151.6s as 2m 31.6s like the React helper',
         (tester) async {
@@ -539,6 +605,108 @@ void main() {
       cursor.moveActive(rows, '', 1);
       cursor.moveActive(rows, '', 1);
       expect(cursor.activeIndex(rows, ''), 2);
+    });
+  });
+
+  group('BeuiFileUpload', () {
+    test('formatBytes matches the React helper', () {
+      expect(beuiFormatBytes(0), '0 B');
+      expect(beuiFormatBytes(18400000), '18 MB');
+      expect(beuiFormatBytes(2800000), '2.7 MB');
+    });
+
+    testWidgets('shows queued names and retry on error', (tester) async {
+      var retried = false;
+      await tester.pumpWidget(
+        BeuiTheme.wrap(
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Center(
+              child: SizedBox(
+                width: 420,
+                child: BeuiFileUpload(
+                  value: const [
+                    BeuiFileUploadItem(
+                      id: 'contracts',
+                      name: 'vendor-contract.pdf',
+                      size: 2800000,
+                      type: 'application/pdf',
+                      status: BeuiFileUploadStatus.error,
+                      error: 'Connection lost',
+                    ),
+                  ],
+                  onRetry: (_) => retried = true,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('vendor-contract.pdf'), findsOneWidget);
+      expect(find.textContaining('Connection lost'), findsOneWidget);
+      await tester.tap(find.bySemanticsLabel('Retry vendor-contract.pdf'));
+      await tester.pump();
+      expect(retried, isTrue);
+    });
+  });
+
+  group('BeuiToolApproval', () {
+    testWidgets('pending shows allow/deny; complete hides actions',
+        (tester) async {
+      var approved = false;
+      await tester.pumpWidget(
+        BeuiTheme.wrap(
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Center(
+              child: SizedBox(
+                width: 420,
+                child: BeuiToolApproval(
+                  tool: 'terminal.run',
+                  title: 'Allow this tool to run?',
+                  status: BeuiToolApprovalStatus.pending,
+                  initialOpen: true,
+                  parameters: const [
+                    BeuiToolApprovalParameter(
+                      id: 'command',
+                      label: 'Command',
+                      value: Text('bun test'),
+                    ),
+                  ],
+                  onApprove: () => approved = true,
+                  onDeny: () {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Approval required'), findsOneWidget);
+      expect(find.text('Allow once'), findsOneWidget);
+      expect(find.text('bun test'), findsOneWidget);
+      await tester.tap(find.text('Allow once'));
+      await tester.pump();
+      expect(approved, isTrue);
+
+      await tester.pumpWidget(
+        BeuiTheme.wrap(
+          child: const Directionality(
+            textDirection: TextDirection.ltr,
+            child: Center(
+              child: SizedBox(
+                width: 420,
+                child: BeuiToolApproval(
+                  tool: 'terminal.run',
+                  title: 'Terminal access',
+                  status: BeuiToolApprovalStatus.complete,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Completed'), findsOneWidget);
+      expect(find.text('Allow once'), findsNothing);
     });
   });
 }
