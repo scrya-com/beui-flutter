@@ -912,4 +912,100 @@ void main() {
       expect(find.text('thread'), findsOneWidget);
     });
   });
+
+  group('BeuiAnimatedToastStack', () {
+    testWidgets('shows, auto-dismisses, and keeps duration-0 toasts',
+        (tester) async {
+      await tester.pumpWidget(
+        BeuiTheme.wrap(
+          child: const Directionality(
+            textDirection: TextDirection.ltr,
+            child: _ToastHarness(),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Show'));
+      await tester.pump();
+      expect(find.text('Hello'), findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 220));
+      expect(find.text('Hello'), findsNothing);
+
+      await tester.tap(find.text('Hold'));
+      await tester.pump();
+      expect(find.text('Sticky'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 800));
+      expect(find.text('Sticky'), findsOneWidget);
+
+      await tester.tap(find.text('Dismiss'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.text('Sticky'), findsNothing);
+    });
+  });
+}
+
+class _ToastHarness extends StatefulWidget {
+  const _ToastHarness();
+
+  @override
+  State<_ToastHarness> createState() => _ToastHarnessState();
+}
+
+class _ToastHarnessState extends State<_ToastHarness>
+    with TickerProviderStateMixin {
+  late final BeuiAnimatedToastController _toasts;
+
+  @override
+  void initState() {
+    super.initState();
+    _toasts = BeuiAnimatedToastController(
+      vsync: this,
+      defaultDuration: const Duration(milliseconds: 400),
+    )..addListener(() {
+        if (mounted) setState(() {});
+      });
+  }
+
+  @override
+  void dispose() {
+    _toasts.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: () => _toasts.showToast(const BeuiToastInput(title: 'Hello')),
+          child: const Text('Show'),
+        ),
+        GestureDetector(
+          onTap: () => _toasts.showToast(
+            const BeuiToastInput(
+              title: 'Sticky',
+              duration: Duration.zero,
+            ),
+          ),
+          child: const Text('Hold'),
+        ),
+        GestureDetector(
+          onTap: () {
+            for (final t in _toasts.toasts) {
+              _toasts.dismissToast(t.id);
+            }
+          },
+          child: const Text('Dismiss'),
+        ),
+        BeuiAnimatedToastStack(
+          toasts: _toasts.toasts,
+          onDismiss: _toasts.dismissToast,
+          placement: BeuiToastPlacement.stat,
+        ),
+      ],
+    );
+  }
 }

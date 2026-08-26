@@ -493,6 +493,32 @@ class BeuiIcons {
     c.drawLine(const Offset(8, 13), const Offset(4, 17), p);
   }
 
+  static void bell(Canvas c, Size s, Paint p) {
+    c.drawPath(
+      Path()
+        ..moveTo(6, 8)
+        ..cubicTo(6, 4.7, 8.7, 2, 12, 2)
+        ..cubicTo(15.3, 2, 18, 4.7, 18, 8)
+        ..cubicTo(18, 15, 21, 17, 21, 17)
+        ..lineTo(3, 17)
+        ..cubicTo(3, 17, 6, 15, 6, 8),
+      p,
+    );
+    c.drawPath(
+      Path()
+        ..moveTo(10.3, 21)
+        ..cubicTo(10.8, 21.6, 11.4, 22, 12, 22)
+        ..cubicTo(12.6, 22, 13.2, 21.6, 13.7, 21),
+      p,
+    );
+  }
+
+  static void info(Canvas c, Size s, Paint p) {
+    c.drawCircle(const Offset(12, 12), 9, p);
+    c.drawLine(const Offset(12, 16), const Offset(12, 12), p);
+    c.drawCircle(const Offset(12, 8), 0.6, p);
+  }
+
   static void alertCircle(Canvas c, Size s, Paint p) {
     c.drawCircle(const Offset(12, 12), 9, p);
     c.drawLine(const Offset(12, 8), const Offset(12, 12), p);

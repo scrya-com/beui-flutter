@@ -66,6 +66,7 @@ final demoBuilders = <String, DemoBuilder>{
   'motion/combobox': () => const ComboboxDemo(),
   'motion/wheel-picker': () => const WheelPickerDemo(),
   'motion/pull-to-refresh': () => const PullToRefreshDemo(),
+  'motion/animated-toast-stack': () => const AnimatedToastStackDemo(),
   'agents/thinking-shimmer': () => const ThinkingShimmerDemo(),
   'agents/agent-progress': () => const AgentProgressDemo(),
   'agents/reasoning-text': () => const ReasoningTextDemo(),

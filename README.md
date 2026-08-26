@@ -8,12 +8,12 @@ Live gallery: [https://scrya-com.github.io/beui-flutter/](https://scrya-com.gith
 
 ## Status
 
-**72 of 124** catalog previews are live. The rest show as Soon.
+**73 of 124** catalog previews are live. The rest show as Soon.
 
 | Area | Live | Still Soon |
 |---|---|---|
 | **AI Agents** | Chat app, AI sidebar, messages, scroller, prompt input, todo list, code block, file diff, tool result (terminal), streaming response, image generation, tool approval, citations, mixed agent activity, thinking shimmer, agent progress, reasoning text | Approval card (questions / review), tool-result request, agent activity (text / steps / search / tools), agent trace |
-| **Components (motion)** | Buttons, switch, checkbox, radio, input, tabs, select, combobox, sliders (all five), wheel picker, accordion, tilt card, marquee, text/number motion, badges, action-swap, dock, tooltip, loader, expandable control, CTAs (arrow / hold / slide), theme toggle, bottom sheet, drawer, pull-to-refresh, scroll progress / reveal, shared-layout bg | Tables, morph select, gooey + morph popovers, context menu, morphing / center modals, bounce / animated sidebar, preview rail, toast stack, shader background, cylinder carousel, smooth-scroll / parallax / scroll-to |
+| **Components (motion)** | Buttons, switch, checkbox, radio, input, tabs, select, combobox, sliders (all five), wheel picker, accordion, tilt card, marquee, text/number motion, badges, action-swap, animated toast stack, dock, tooltip, loader, expandable control, CTAs (arrow / hold / slide), theme toggle, bottom sheet, drawer, pull-to-refresh, scroll progress / reveal, shared-layout bg | Tables, morph select, gooey + morph popovers, context menu, morphing / center modals, bounce / animated sidebar, preview rail, shader background, cylinder carousel, smooth-scroll / parallax / scroll-to |
 | **Blocks** | File upload, attachment upload | Masonry, notification stack, project folder, swap, dynamic island, command palette, morphing search, action bars, swipeable list, knockout bracket / wheel, prediction market, wallet, scheduler, OTP, signup, 404 variants |
 
 Known limits (not Soon — live, but incomplete vs React):

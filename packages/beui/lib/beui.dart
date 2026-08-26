@@ -16,6 +16,7 @@ export 'src/tokens/oklch.dart';
 export 'src/tokens/theme.dart';
 export 'src/widgets/icons.dart';
 export 'src/widgets/motion/action_swap.dart';
+export 'src/widgets/motion/animated_toast_stack.dart';
 export 'src/widgets/motion/animated_badge.dart';
 export 'src/widgets/motion/animated_number.dart';
 export 'src/widgets/motion/bottom_sheet.dart';

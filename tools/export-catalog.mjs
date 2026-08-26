@@ -106,6 +106,7 @@ const implemented = new Set([
   "motion/action-swap-blur",
   "motion/action-swap-roll",
   "motion/action-swap-cascade",
+  "motion/animated-toast-stack",
   "motion/theme-toggle",
   "motion/scroll-reveal",
   "motion/scroll-progress",

@@ -87,7 +87,7 @@ const catalog = <CatalogEntry>[
   CatalogEntry(key: 'motion/animated-number', category: 'motion', slug: 'animated-number', name: 'Animated Number', description: 'Spring-driven count-up triggered when in view.', implemented: true),
   CatalogEntry(key: 'motion/number-ticker', category: 'motion', slug: 'number-ticker', name: 'Number Ticker', description: 'Slot-machine rolling digits with staggered entry.', implemented: true),
   CatalogEntry(key: 'motion/animated-badge', category: 'motion', slug: 'animated-badge', name: 'Animated Badge', description: '', implemented: true),
-  CatalogEntry(key: 'motion/animated-toast-stack', category: 'motion', slug: 'animated-toast-stack', name: 'Animated Toast Stack', description: '', implemented: false),
+  CatalogEntry(key: 'motion/animated-toast-stack', category: 'motion', slug: 'animated-toast-stack', name: 'Animated Toast Stack', description: 'Stacked toasts with status morphs, swipe dismissal, actions and layout-aware motion.', implemented: true),
   CatalogEntry(key: 'motion/action-swap', category: 'motion', slug: 'action-swap', name: 'Action Swap', description: '', implemented: true),
   CatalogEntry(key: 'motion/action-swap-blur', category: 'motion', slug: 'action-swap-blur', name: 'Blur', description: 'Copy-button style swap with blur, opacity and scale.', implemented: true),
   CatalogEntry(key: 'motion/action-swap-roll', category: 'motion', slug: 'action-swap-roll', name: 'Roll', description: 'The next text or icon rolls in from below with blur.', implemented: true),

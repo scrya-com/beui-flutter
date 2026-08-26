@@ -359,3 +359,297 @@ class _ScrollProgressDemoState extends State<ScrollProgressDemo> {
     );
   }
 }
+
+class AnimatedToastStackDemo extends StatefulWidget {
+  const AnimatedToastStackDemo({super.key});
+
+  @override
+  State<AnimatedToastStackDemo> createState() => _AnimatedToastStackDemoState();
+}
+
+class _AnimatedToastStackDemoState extends State<AnimatedToastStackDemo>
+    with TickerProviderStateMixin {
+  static const _positions = BeuiToastPosition.values;
+
+  late final BeuiAnimatedToastController _toasts;
+  BeuiToastPosition _position = BeuiToastPosition.bottomRight;
+  final List<AnimationController> _pending = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _toasts = BeuiAnimatedToastController(
+      vsync: this,
+      defaultDuration: const Duration(milliseconds: 3600),
+      limit: 5,
+    )..addListener(_onToasts);
+  }
+
+  void _onToasts() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    for (final c in _pending) {
+      c.dispose();
+    }
+    _toasts
+      ..removeListener(_onToasts)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _openToast({
+    required BeuiToastStatus status,
+    required String title,
+    required String description,
+    Duration? duration,
+  }) {
+    final id = _toasts.showToast(
+      BeuiToastInput(
+        status: status,
+        title: title,
+        description: description,
+        duration: duration,
+      ),
+    );
+    if (status != BeuiToastStatus.loading) return;
+    final wait = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    );
+    _pending.add(wait);
+    wait
+      ..addStatusListener((s) {
+        if (s == AnimationStatus.completed) {
+          _toasts.updateToast(
+            id,
+            status: BeuiToastStatus.success,
+            title: 'Publish complete',
+            description: 'Toast updated in-place from loading to success.',
+            duration: const Duration(milliseconds: 3200),
+          );
+          wait.dispose();
+          _pending.remove(wait);
+        }
+      })
+      ..forward();
+  }
+
+  void _moveStack(BeuiToastPosition next) {
+    setState(() => _position = next);
+    _toasts.showToast(
+      BeuiToastInput(
+        status: BeuiToastStatus.info,
+        title: 'Position changed',
+        description: 'New toasts open from ${_label(next)}.',
+      ),
+    );
+  }
+
+  String _label(BeuiToastPosition p) {
+    return switch (p) {
+      BeuiToastPosition.topLeft => 'top-left',
+      BeuiToastPosition.topCenter => 'top-center',
+      BeuiToastPosition.topRight => 'top-right',
+      BeuiToastPosition.bottomLeft => 'bottom-left',
+      BeuiToastPosition.bottomCenter => 'bottom-center',
+      BeuiToastPosition.bottomRight => 'bottom-right',
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.beuiColors;
+    return Stack(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Open a real toast',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: colors.foreground,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 384),
+                  child: Text(
+                    'Toasts render fixed on the screen. Change position to open a toast from that edge.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 20 / 12,
+                      color: colors.mutedForeground,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    _ToastChip(
+                      icon: BeuiIcons.loader,
+                      label: 'Promise',
+                      onTap: () => _openToast(
+                        status: BeuiToastStatus.loading,
+                        title: 'Publishing component',
+                        description:
+                            'Bundling source, preview, and registry metadata.',
+                        duration: Duration.zero,
+                      ),
+                    ),
+                    _ToastChip(
+                      icon: BeuiIcons.check,
+                      label: 'Success',
+                      onTap: () => _openToast(
+                        status: BeuiToastStatus.success,
+                        title: 'Component published',
+                        description:
+                            'Registry endpoint and raw source are available.',
+                      ),
+                    ),
+                    _ToastChip(
+                      icon: BeuiIcons.x,
+                      label: 'Error',
+                      onTap: () => _openToast(
+                        status: BeuiToastStatus.error,
+                        title: 'Snapshot failed',
+                        description: 'Retry after the browser target settles.',
+                      ),
+                    ),
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _toasts.clearToasts,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        child: Text(
+                          'Clear',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: colors.mutedForeground,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    for (final pos in _positions)
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => _moveStack(pos),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: pos == _position
+                                ? colors.foreground
+                                : colors.foreground.withValues(alpha: 0.04),
+                            borderRadius: BorderRadius.circular(BeuiRadii.pill),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            child: Text(
+                              _label(pos),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: pos == _position
+                                    ? colors.background
+                                    : colors.mutedForeground,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        BeuiAnimatedToastStack(
+          toasts: _toasts.toasts,
+          onDismiss: _toasts.dismissToast,
+          position: _position,
+          placement: BeuiToastPlacement.fixed,
+          maxVisible: 4,
+          icons: {
+            BeuiToastStatus.neutral: BeuiIcon(
+              BeuiIcons.sparkles,
+              size: 14,
+              color: colors.mutedForeground,
+            ),
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _ToastChip extends StatelessWidget {
+  const _ToastChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final BeuiIconPainter icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.beuiColors;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.card,
+          borderRadius: BorderRadius.circular(BeuiRadii.pill),
+          border: Border.all(color: colors.border),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 8,
+            children: [
+              BeuiIcon(icon, size: 14, color: colors.foreground),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: colors.foreground,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
