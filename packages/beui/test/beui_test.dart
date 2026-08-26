@@ -985,6 +985,74 @@ void main() {
       expect(find.text('Sticky'), findsNothing);
     });
 
+    testWidgets('tapping close dismisses the toast', (tester) async {
+      await tester.pumpWidget(
+        BeuiTheme.wrap(
+          child: const Directionality(
+            textDirection: TextDirection.ltr,
+            child: _ToastHarness(),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Show'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 80));
+      expect(find.text('Hello'), findsOneWidget);
+
+      await tester.tap(find.byWidgetPredicate(_isToastDismiss));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.text('Hello'), findsNothing);
+    });
+
+    testWidgets('close still dismisses after a small pointer move',
+        (tester) async {
+      await tester.pumpWidget(
+        BeuiTheme.wrap(
+          child: const Directionality(
+            textDirection: TextDirection.ltr,
+            child: _ToastHarness(),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Show'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 80));
+
+      final close = find.byWidgetPredicate(_isToastDismiss);
+      final center = tester.getCenter(close);
+      final gesture = await tester.startGesture(center);
+      await gesture.moveBy(const Offset(24, 0));
+      await gesture.up();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.text('Hello'), findsNothing);
+    });
+
+    testWidgets('close on one toast leaves the others', (tester) async {
+      await tester.pumpWidget(
+        BeuiTheme.wrap(
+          child: const Directionality(
+            textDirection: TextDirection.ltr,
+            child: _ToastHarness(),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Hold'));
+      await tester.pump();
+      await tester.tap(find.text('Show'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 80));
+      expect(find.text('Sticky'), findsOneWidget);
+      expect(find.text('Hello'), findsOneWidget);
+
+      await tester.tap(find.byWidgetPredicate(_isToastDismiss).last);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.text('Hello'), findsNothing);
+      expect(find.text('Sticky'), findsOneWidget);
+    });
+
     testWidgets('fixed placement portals a toast onto Overlay', (tester) async {
       await tester.pumpWidget(
         BeuiTheme.wrap(
@@ -1005,6 +1073,12 @@ void main() {
       await tester.tap(find.text('Show'));
       await tester.pump();
       expect(find.text('Hello'), findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 80));
+      await tester.tap(find.byWidgetPredicate(_isToastDismiss));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.text('Hello'), findsNothing);
     });
   });
 
@@ -1086,6 +1160,12 @@ void main() {
       expect(scrollable.position.pixels, before);
     });
   });
+}
+
+bool _isToastDismiss(Widget widget) {
+  final key = widget.key;
+  return key is ValueKey<String> &&
+      key.value.startsWith('beui-toast-dismiss-');
 }
 
 class _ToastHarness extends StatefulWidget {

@@ -401,14 +401,14 @@ class _BeuiAnimatedToastStackState extends State<BeuiAnimatedToastStack> {
           verticalDirection:
               isBottom ? VerticalDirection.up : VerticalDirection.down,
           children: [
-            for (var i = 0; i < shown.length; i++) ...[
+            for (final (i, item) in shown.indexed) ...[
               if (i > 0) const SizedBox(height: 8),
               _ToastItem(
-                key: ValueKey(shown[i].toast.id),
-                toast: shown[i].toast,
-                exiting: shown[i].exiting,
+                key: ValueKey(item.toast.id),
+                toast: item.toast,
+                exiting: item.exiting,
                 onDismiss: widget.onDismiss,
-                onExitComplete: () => _finishExit(shown[i].toast.id),
+                onExitComplete: () => _finishExit(item.toast.id),
                 icons: widget.icons,
                 renderToast: widget.renderToast,
               ),
@@ -470,6 +470,7 @@ class _ToastItemState extends State<_ToastItem>
   double _drag = 0;
   double _velocity = 0;
   DateTime? _lastMove;
+  int? _pointer;
 
   bool get _canDismiss =>
       widget.toast.dismissible && widget.onDismiss != null;
@@ -491,10 +492,14 @@ class _ToastItemState extends State<_ToastItem>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
+    if (widget.exiting) {
+      _enter.jump(1);
+      _startExit();
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _enter.reducedMotion = beuiReduceMotion(context);
-      _enter.animateTo(1);
+      if (!widget.exiting) _enter.animateTo(1);
       _syncSpin();
     });
   }
@@ -512,10 +517,13 @@ class _ToastItemState extends State<_ToastItem>
   @override
   void didUpdateWidget(_ToastItem oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.exiting && !oldWidget.exiting) {
-      _exit.forward();
-    }
+    if (widget.exiting && !oldWidget.exiting) _startExit();
     _syncSpin();
+  }
+
+  void _startExit() {
+    if (_exit.isCompleted || _exit.isAnimating) return;
+    _exit.forward();
   }
 
   void _syncSpin() {
@@ -551,6 +559,32 @@ class _ToastItemState extends State<_ToastItem>
     _drag = 0;
     _velocity = 0;
     if (mounted) setState(() {});
+  }
+
+  void _onPointerDown(PointerDownEvent e) {
+    if (!_canDismiss) return;
+    _pointer = e.pointer;
+    _lastMove = DateTime.now();
+    _drag = 0;
+    _velocity = 0;
+  }
+
+  void _onPointerMove(PointerMoveEvent e) {
+    if (e.pointer != _pointer) return;
+    final now = DateTime.now();
+    final dt = _lastMove == null
+        ? 0.016
+        : now.difference(_lastMove!).inMicroseconds / 1e6;
+    if (dt > 0.0004) _velocity = e.delta.dx / dt;
+    _lastMove = now;
+    _drag += e.delta.dx;
+    setState(() {});
+  }
+
+  void _onPointerUp(PointerEvent e) {
+    if (e.pointer != _pointer) return;
+    _pointer = null;
+    _onDragEnd();
   }
 
   @override
@@ -632,23 +666,16 @@ class _ToastItemState extends State<_ToastItem>
       ),
     );
 
-    if (_canDismiss && !reduce) {
-      painted = GestureDetector(
-        onHorizontalDragStart: (_) {
-          _lastMove = DateTime.now();
-        },
-        onHorizontalDragUpdate: (d) {
-          final now = DateTime.now();
-          final dt = _lastMove == null
-              ? 0.016
-              : now.difference(_lastMove!).inMicroseconds / 1e6;
-          if (dt > 0.0004) _velocity = d.delta.dx / dt;
-          _lastMove = now;
-          _drag += d.delta.dx;
-          setState(() {});
-        },
-        onHorizontalDragEnd: (_) => _onDragEnd(),
-        onHorizontalDragCancel: _onDragEnd,
+    if (widget.exiting) {
+      painted = IgnorePointer(child: painted);
+    } else if (_canDismiss && !reduce) {
+      // Raw pointers, not a drag GestureDetector — those win the arena
+      // over the close control's tap when the pointer moves a few pixels.
+      painted = Listener(
+        onPointerDown: _onPointerDown,
+        onPointerMove: _onPointerMove,
+        onPointerUp: (e) => _onPointerUp(e),
+        onPointerCancel: (e) => _onPointerUp(e),
         child: painted,
       );
     }
@@ -826,12 +853,14 @@ class _DefaultToastBodyState extends State<_DefaultToastBody> {
             onExit: (_) => beuiAfterPointer(() {
               if (mounted) setState(() => _closeHover = false);
             }),
-            child: GestureDetector(
+            child: Listener(
+              key: ValueKey('beui-toast-dismiss-${widget.toast.id}'),
               behavior: HitTestBehavior.opaque,
-              onTap: widget.onDismiss,
+              onPointerUp: (_) => widget.onDismiss(),
               child: Semantics(
                 button: true,
                 label: 'Dismiss toast',
+                onTap: widget.onDismiss,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     color: _closeHover
