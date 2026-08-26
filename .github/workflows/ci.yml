@@ -143,6 +143,51 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.44.1"
+          channel: stable
+          cache: true
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Build release APK
+        working-directory: apps/gallery
+        run: flutter build apk --release
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: beui-gallery-android
+          path: apps/gallery/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Summarize
+        run: |
+          {
+            echo "## Android APK"
+            echo
+            echo "- Download the **beui-gallery-android** artifact from this run (\`app-release.apk\`)."
+            echo "- Sideload onto a device: \`adb install app-release.apk\`."
+            echo "- Signed with the debug keystore so \`flutter run --release\` and CI stay installable without a Play upload key."
+          } >> "$GITHUB_STEP_SUMMARY"
+
   pages:
     name: Deploy GitHub Pages
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

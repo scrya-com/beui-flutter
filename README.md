@@ -62,6 +62,8 @@ Each push and pull request builds the Flutter **web** gallery and uploads a **`b
 
 Do **not** add a custom domain in GitHub Pages unless you own the hostname. The default `*.github.io` URL is enough. Source must be **GitHub Actions**, not “Deploy from a branch”.
 
+Each push also builds a release **Android APK** (`beui-gallery-android` artifact, `app-release.apk`). Sideload with `adb install app-release.apk`. It is signed with the debug keystore so CI and `flutter run --release` stay installable without a Play upload key.
+
 ## Run the gallery
 
 ```bash
@@ -77,6 +79,15 @@ Physical iPhone (release):
 ```bash
 cd apps/gallery
 flutter run --release -d 00008140-00161C440C33001C
+```
+
+Android APK:
+
+```bash
+cd apps/gallery
+flutter build apk --release
+# apps/gallery/build/app/outputs/flutter-apk/app-release.apk
+adb install -r build/app/outputs/flutter-apk/app-release.apk
 ```
 
 Each demo has a **React ↗** link to the matching page on beui.dev. Agent demos have a **Replay** control under the preview well that remounts the example.
