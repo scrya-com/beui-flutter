@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/scheduler.dart';
@@ -59,6 +58,7 @@ const _velocityWindow = 90.0; // ms
 const _wheelSens = 0.012; // rows per pixel of wheel delta
 const _wheelSettleMs = 110.0;
 const _back = 1.35;
+const _perspective = 0.001; // 1 / CSS perspective 1000
 
 class _BeuiWheelPickerState extends State<BeuiWheelPicker>
     with SingleTickerProviderStateMixin {
@@ -66,19 +66,20 @@ class _BeuiWheelPickerState extends State<BeuiWheelPicker>
   late String? _emitted;
   int _lastTick = 0;
   bool _grabbing = false;
+  ScrollController? _reduceScroll;
 
   Ticker? _ticker;
   Duration _elapsed = Duration.zero;
 
   _Glide? _glide;
   _Drag? _drag;
-  Offset? _latestPointer;
+  double? _latestY;
   double? _wheelSettleRemain;
 
   bool get _controlled => widget.value != null;
   String? get _current => _controlled ? widget.value : _emitted;
 
-  int get _last => widget.options.length - 1;
+  int get _last => math.max(0, widget.options.length - 1);
 
   double get _itemAngleDeg {
     final rowsEachSide = math.max(1, (widget.visibleCount / 2).floor());
@@ -96,9 +97,7 @@ class _BeuiWheelPickerState extends State<BeuiWheelPicker>
 
   double get _height {
     final rowsEachSide = math.max(1, (widget.visibleCount / 2).floor());
-    return (2 *
-                _radius *
-                math.sin(rowsEachSide * _itemAngleRad) +
+    return (2 * _radius * math.sin(rowsEachSide * _itemAngleRad) +
             widget.itemHeight)
         .roundToDouble();
   }
@@ -117,6 +116,9 @@ class _BeuiWheelPickerState extends State<BeuiWheelPicker>
     _scroll = _indexOf(_emitted).toDouble();
     _lastTick = _scroll.round();
     _ticker = createTicker(_onTick);
+    _reduceScroll = ScrollController(
+      initialScrollOffset: _scroll * widget.itemHeight,
+    );
   }
 
   @override
@@ -132,6 +134,7 @@ class _BeuiWheelPickerState extends State<BeuiWheelPicker>
   @override
   void dispose() {
     _ticker?.dispose();
+    _reduceScroll?.dispose();
     super.dispose();
   }
 
@@ -155,11 +158,6 @@ class _BeuiWheelPickerState extends State<BeuiWheelPicker>
     _elapsed = elapsed;
     final dt = (elapsed - last).inMicroseconds / 1e6;
     var dirty = false;
-
-    if (_drag != null && _latestPointer != null) {
-      _applyDragY(_latestPointer!.dy);
-      dirty = true;
-    }
 
     final glide = _glide;
     if (glide != null) {
@@ -255,9 +253,6 @@ class _BeuiWheelPickerState extends State<BeuiWheelPicker>
     if (v == _emitted) return;
     _emitted = v;
     if (widget.sound && beuiReduceMotion(context)) _playTick();
-    if (!_controlled) {
-      // Uncontrolled: _emitted is the source of truth.
-    }
     widget.onChanged?.call(v);
     if (mounted) setState(() {});
   }
@@ -284,16 +279,17 @@ class _BeuiWheelPickerState extends State<BeuiWheelPicker>
     _ticker?.stop();
     _grabbing = true;
     _drag = _Drag(y: y, scroll: _scroll, pts: [(y, _nowMs())]);
-    _latestPointer = Offset(0, y);
+    _latestY = y;
     if (mounted) setState(() {});
   }
 
   void _moveDrag(double y) {
     if (_drag == null) return;
-    _latestPointer = Offset(0, y);
+    _latestY = y;
     _drag!.pts.add((y, _nowMs()));
     if (_drag!.pts.length > 8) _drag!.pts.removeAt(0);
-    _ensureTicking();
+    _applyDragY(y);
+    if (mounted) setState(() {});
   }
 
   void _applyDragY(double y) {
@@ -313,8 +309,9 @@ class _BeuiWheelPickerState extends State<BeuiWheelPicker>
   void _endDrag() {
     final drag = _drag;
     if (drag == null) return;
+    if (_latestY != null) _applyDragY(_latestY!);
     _drag = null;
-    _latestPointer = null;
+    _latestY = null;
     _grabbing = false;
     var v = 0.0;
     final pts = drag.pts;
@@ -337,8 +334,7 @@ class _BeuiWheelPickerState extends State<BeuiWheelPicker>
     if (mounted) setState(() {});
   }
 
-  double _nowMs() =>
-      WidgetsBinding.instance.currentFrameTimeStamp.inMicroseconds / 1000;
+  double _nowMs() => DateTime.now().millisecondsSinceEpoch.toDouble();
 
   void _onWheel(double deltaY, int deltaMode) {
     if (!widget.enabled || beuiReduceMotion(context)) return;
@@ -376,102 +372,156 @@ class _BeuiWheelPickerState extends State<BeuiWheelPicker>
     final reduce = beuiReduceMotion(context);
     if (reduce) return _buildReduced(colors);
 
-    return Focus(
-      onKeyEvent: _onKey,
-      child: Semantics(
-        label: widget.semanticLabel,
-        enabled: widget.enabled,
-        child: Listener(
-          onPointerDown: widget.enabled
-              ? (e) {
-                  if (e.kind == PointerDeviceKind.trackpad) return;
-                  _beginDrag(e.position.dy);
-                }
-              : null,
-          onPointerMove: (e) => _moveDrag(e.position.dy),
-          onPointerUp: (_) => _endDrag(),
-          onPointerCancel: (_) => _endDrag(),
-          onPointerSignal: (e) {
-            if (e is PointerScrollEvent) {
-              _onWheel(e.scrollDelta.dy, 0);
-            }
-          },
-          child: MouseRegion(
-            cursor: !widget.enabled
-                ? SystemMouseCursors.basic
-                : _grabbing
-                    ? SystemMouseCursors.grabbing
-                    : SystemMouseCursors.grab,
-            child: Opacity(
-              opacity: widget.enabled ? 1 : 0.5,
-              child: SizedBox(
-                height: _height,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(BeuiRadii.card),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: widget.framed ? colors.card : null,
-                      border: widget.framed
-                          ? Border.all(color: colors.border)
-                          : null,
-                      borderRadius: BorderRadius.circular(BeuiRadii.card),
-                    ),
-                    child: ShaderMask(
-                      blendMode: BlendMode.dstIn,
-                      shaderCallback: (rect) {
-                        return const LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Color(0x00000000),
-                            Color(0xFF000000),
-                            Color(0xFF000000),
-                            Color(0x00000000),
-                          ],
-                          stops: [0, 0.22, 0.78, 1],
-                        ).createShader(rect);
-                      },
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          _DrumLayer(
+    final fade = widget.framed ? colors.card : colors.background;
+    final height = _height;
+
+    Widget drum = SizedBox(
+      height: height,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(BeuiRadii.card),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: widget.framed ? colors.card : null,
+            border: widget.framed ? Border.all(color: colors.border) : null,
+            borderRadius: BorderRadius.circular(BeuiRadii.card),
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              _DrumLayer(
+                options: widget.options,
+                scroll: _scroll,
+                itemHeight: widget.itemHeight,
+                itemAngleRad: _itemAngleRad,
+                radius: _radius,
+                hideBeyond: _hideBeyond,
+                color: colors.mutedForeground,
+              ),
+              Center(
+                child: IgnorePointer(
+                  child: SizedBox(
+                    height: widget.itemHeight,
+                    width: double.infinity,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: colors.foreground.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(BeuiRadii.md),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(BeuiRadii.md),
+                        child: OverflowBox(
+                          maxHeight: height,
+                          minHeight: height,
+                          alignment: Alignment.center,
+                          child: _DrumLayer(
                             options: widget.options,
                             scroll: _scroll,
                             itemHeight: widget.itemHeight,
                             itemAngleRad: _itemAngleRad,
                             radius: _radius,
                             hideBeyond: _hideBeyond,
-                            color: colors.mutedForeground,
+                            color: colors.foreground,
                           ),
-                          Center(
-                            child: IgnorePointer(
-                              child: SizedBox(
-                                height: widget.itemHeight,
-                                width: double.infinity,
-                                child: ColoredBox(
-                                  color: colors.foreground
-                                      .withValues(alpha: 0.04),
-                                  child: ClipRect(
-                                    child: _DrumLayer(
-                                      options: widget.options,
-                                      scroll: _scroll,
-                                      itemHeight: widget.itemHeight,
-                                      itemAngleRad: _itemAngleRad,
-                                      radius: _radius,
-                                      hideBeyond: _hideBeyond,
-                                      color: colors.foreground,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: height * 0.22,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [fade, fade.withValues(alpha: 0)],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: height * 0.22,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [fade, fade.withValues(alpha: 0)],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (!widget.enabled) {
+      drum = Opacity(opacity: 0.5, child: drum);
+    }
+
+    return Focus(
+      onKeyEvent: _onKey,
+      child: Semantics(
+        label: widget.semanticLabel,
+        enabled: widget.enabled,
+        value: _current,
+        child: RawGestureDetector(
+          behavior: HitTestBehavior.opaque,
+          gestures: widget.enabled
+              ? <Type, GestureRecognizerFactory>{
+                  _ClaimVerticalDrag: GestureRecognizerFactoryWithHandlers<
+                      _ClaimVerticalDrag>(
+                    () => _ClaimVerticalDrag(
+                      supportedDevices: const {
+                        PointerDeviceKind.touch,
+                        PointerDeviceKind.mouse,
+                        PointerDeviceKind.stylus,
+                        PointerDeviceKind.invertedStylus,
+                      },
+                    ),
+                    (instance) {
+                      instance.dragStartBehavior = DragStartBehavior.down;
+                      instance.onStart =
+                          (d) => _beginDrag(d.globalPosition.dy);
+                      instance.onUpdate =
+                          (d) => _moveDrag(d.globalPosition.dy);
+                      instance.onEnd = (_) => _endDrag();
+                      instance.onCancel = _endDrag;
+                    },
+                  ),
+                }
+              : const <Type, GestureRecognizerFactory>{},
+          child: Listener(
+            onPointerSignal: (event) {
+              if (event is! PointerScrollEvent) return;
+              GestureBinding.instance.pointerSignalResolver.register(
+                event,
+                (resolved) {
+                  final scroll = resolved as PointerScrollEvent;
+                  _onWheel(scroll.scrollDelta.dy, 0);
+                },
+              );
+            },
+            child: MouseRegion(
+              cursor: !widget.enabled
+                  ? SystemMouseCursors.basic
+                  : _grabbing
+                      ? SystemMouseCursors.grabbing
+                      : SystemMouseCursors.grab,
+              child: drum,
             ),
           ),
         ),
@@ -481,6 +531,7 @@ class _BeuiWheelPickerState extends State<BeuiWheelPicker>
 
   Widget _buildReduced(BeuiColors colors) {
     final pad = (_height - widget.itemHeight) / 2;
+    final controller = _reduceScroll;
     return Opacity(
       opacity: widget.enabled ? 1 : 0.5,
       child: SizedBox(
@@ -496,6 +547,7 @@ class _BeuiWheelPickerState extends State<BeuiWheelPicker>
             child: Stack(
               children: [
                 ListView.builder(
+                  controller: controller,
                   padding: EdgeInsets.symmetric(vertical: pad),
                   itemExtent: widget.itemHeight,
                   itemCount: widget.options.length,
@@ -503,7 +555,12 @@ class _BeuiWheelPickerState extends State<BeuiWheelPicker>
                     final option = widget.options[i];
                     final selected = option.value == _current;
                     return GestureDetector(
-                      onTap: widget.enabled ? () => _emit(i) : null,
+                      onTap: widget.enabled
+                          ? () {
+                              _emit(i);
+                              controller?.jumpTo(i * widget.itemHeight);
+                            }
+                          : null,
                       child: Center(
                         child: Text(
                           option.label,
@@ -565,6 +622,21 @@ class _Drag {
   final List<(double, double)> pts;
 }
 
+/// Claims the pointer on down so a parent [Scrollable] cannot steal the flick.
+/// React binds non-passive `touchmove` + `preventDefault` for the same reason.
+class _ClaimVerticalDrag extends VerticalDragGestureRecognizer {
+  _ClaimVerticalDrag({super.supportedDevices});
+
+  @override
+  void addAllowedPointer(PointerDownEvent event) {
+    super.addAllowedPointer(event);
+    resolve(GestureDisposition.accepted);
+  }
+}
+
+/// Per-item cylinder using Flutter's cylindrical projection.
+/// CSS is `perspective(1000) · T(0,0,-r) · Rx(angle·(s-i)) · T(0,0,r)`;
+/// nested Transform layers flatten, so each row gets the composed matrix.
 class _DrumLayer extends StatelessWidget {
   const _DrumLayer({
     required this.options,
@@ -588,22 +660,26 @@ class _DrumLayer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       alignment: Alignment.center,
+      clipBehavior: Clip.none,
       children: [
         for (var i = 0; i < options.length; i++)
           if ((i - scroll).abs() <= hideBeyond)
             Transform(
               alignment: Alignment.center,
               transformHitTests: false,
-              transform: Matrix4.identity()
-                ..setEntry(3, 2, 0.001)
-                ..translateByDouble(0.0, 0.0, -radius, 1.0)
-                ..rotateX(itemAngleRad * (scroll - i))
-                ..translateByDouble(0.0, 0.0, radius, 1.0),
+              transform: MatrixUtils.createCylindricalProjectionTransform(
+                radius: radius,
+                angle: itemAngleRad * (scroll - i),
+                perspective: _perspective,
+              ),
               child: SizedBox(
                 height: itemHeight,
+                width: double.infinity,
                 child: Center(
                   child: Text(
                     options[i].label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,

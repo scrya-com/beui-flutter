@@ -326,6 +326,7 @@ class _WheelPickerDemoState extends State<WheelPickerDemo> {
                     semanticLabel: 'Month',
                   ),
                 ),
+                const SizedBox(width: 4),
                 SizedBox(
                   width: 56,
                   child: BeuiWheelPicker(
@@ -341,6 +342,7 @@ class _WheelPickerDemoState extends State<WheelPickerDemo> {
                     semanticLabel: 'Day',
                   ),
                 ),
+                const SizedBox(width: 4),
                 SizedBox(
                   width: 80,
                   child: BeuiWheelPicker(

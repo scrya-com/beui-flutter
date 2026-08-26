@@ -985,6 +985,85 @@ void main() {
       expect(find.text('Sticky'), findsNothing);
     });
   });
+
+  group('BeuiWheelPicker', () {
+    const options = [
+      BeuiWheelPickerOption(value: 'May'),
+      BeuiWheelPickerOption(value: 'June'),
+      BeuiWheelPickerOption(value: 'July'),
+      BeuiWheelPickerOption(value: 'August'),
+    ];
+
+    testWidgets('drag moves the selected value', (tester) async {
+      String value = 'June';
+      await tester.pumpWidget(
+        BeuiTheme.wrap(
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Center(
+              child: SizedBox(
+                width: 128,
+                child: BeuiWheelPicker(
+                  options: options,
+                  value: value,
+                  onChanged: (v) => value = v,
+                  visibleCount: 5,
+                  itemHeight: 36,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('June'), findsWidgets);
+      await tester.drag(find.byType(BeuiWheelPicker), const Offset(0, -48));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(value, isNot('June'));
+    });
+
+    testWidgets('parent ListView does not steal a vertical flick',
+        (tester) async {
+      String value = 'June';
+      await tester.pumpWidget(
+        BeuiTheme.wrap(
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: SizedBox(
+              height: 400,
+              child: ListView(
+                children: [
+                  const SizedBox(height: 120),
+                  Center(
+                    child: SizedBox(
+                      width: 128,
+                      child: BeuiWheelPicker(
+                        options: options,
+                        value: value,
+                        onChanged: (v) => value = v,
+                        visibleCount: 5,
+                        itemHeight: 36,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 800),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      final scrollable = tester.state<ScrollableState>(find.byType(Scrollable));
+      final before = scrollable.position.pixels;
+      await tester.drag(find.byType(BeuiWheelPicker), const Offset(0, -80));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(value, isNot('June'));
+      expect(scrollable.position.pixels, before);
+    });
+  });
 }
 
 class _ToastHarness extends StatefulWidget {
