@@ -1,4 +1,5 @@
 import 'package:beui/beui.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -281,6 +282,7 @@ class _CatalogBody extends StatelessWidget {
     }
 
     return CustomScrollView(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(160),
       slivers: [
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(24, 28, 24, 0),
@@ -391,6 +393,7 @@ class _CatalogBody extends StatelessWidget {
                       );
                     },
                     childCount: section.$3.length,
+                    addAutomaticKeepAlives: false,
                   ),
                 );
               },

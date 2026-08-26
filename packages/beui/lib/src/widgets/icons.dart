@@ -343,6 +343,98 @@ class BeuiIcons {
     c.drawLine(const Offset(13, 15), const Offset(17, 15), p);
   }
 
+  static void fileCode(Canvas c, Size s, Paint p) {
+    c.drawPath(
+      Path()
+        ..moveTo(14, 2)
+        ..lineTo(6, 2)
+        ..lineTo(6, 22)
+        ..lineTo(18, 22)
+        ..lineTo(18, 8)
+        ..close(),
+      p,
+    );
+    c.drawLine(const Offset(14, 2), const Offset(14, 8), p);
+    c.drawLine(const Offset(18, 8), const Offset(14, 8), p);
+    c.drawPath(
+      Path()
+        ..moveTo(10, 13)
+        ..lineTo(8, 15)
+        ..lineTo(10, 17),
+      p,
+    );
+    c.drawPath(
+      Path()
+        ..moveTo(14, 13)
+        ..lineTo(16, 15)
+        ..lineTo(14, 17),
+      p,
+    );
+  }
+
+  static void settings(Canvas c, Size s, Paint p) {
+    c.drawCircle(const Offset(12, 12), 3, p);
+    c.drawCircle(const Offset(12, 12), 8, p);
+    const ticks = <Offset>[
+      Offset(12, 2),
+      Offset(12, 22),
+      Offset(2, 12),
+      Offset(22, 12),
+      Offset(5, 5),
+      Offset(19, 19),
+      Offset(19, 5),
+      Offset(5, 19),
+    ];
+    for (final o in ticks) {
+      c.drawLine(Offset.lerp(const Offset(12, 12), o, 0.72)!, o, p);
+    }
+  }
+
+  static void circleCheck(Canvas c, Size s, Paint p) {
+    c.drawCircle(const Offset(12, 12), 9, p);
+    c.drawPath(
+      Path()
+        ..moveTo(8, 12)
+        ..lineTo(11, 15)
+        ..lineTo(16.5, 9.5),
+      p,
+    );
+  }
+
+  static void code(Canvas c, Size s, Paint p) {
+    c.drawPath(
+      Path()
+        ..moveTo(16, 18)
+        ..lineTo(22, 12)
+        ..lineTo(16, 6),
+      p,
+    );
+    c.drawPath(
+      Path()
+        ..moveTo(8, 6)
+        ..lineTo(2, 12)
+        ..lineTo(8, 18),
+      p,
+    );
+  }
+
+  static void messageSquare(Canvas c, Size s, Paint p) {
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(3, 3, 18, 13),
+        const Radius.circular(2),
+      ),
+      p,
+    );
+    c.drawPath(
+      Path()
+        ..moveTo(8, 16)
+        ..lineTo(8, 21)
+        ..lineTo(13, 16),
+      p,
+    );
+  }
+
   static void rotateCcw(Canvas c, Size s, Paint p) {
     c.drawPath(
       Path()

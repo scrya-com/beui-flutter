@@ -7,6 +7,7 @@ class CatalogEntry {
     required this.name,
     required this.description,
     required this.implemented,
+    this.sourceUrl,
   });
 
   final String key;
@@ -15,8 +16,10 @@ class CatalogEntry {
   final String name;
   final String description;
   final bool implemented;
+  final String? sourceUrl;
 
   String get reactUrl =>
+      sourceUrl ??
       'https://beui.dev/components/$category/${slug.contains('-') && category == 'motion' ? slug.split('-').first : slug}';
 }
 
@@ -30,14 +33,14 @@ const catalog = <CatalogEntry>[
   CatalogEntry(key: 'agents/message-scroller', category: 'agents', slug: 'message-scroller', name: 'Message Scroller', description: '', implemented: true),
   CatalogEntry(key: 'agents/prompt-input', category: 'agents', slug: 'prompt-input', name: 'Prompt Input', description: '', implemented: true),
   CatalogEntry(key: 'agents/todo-list', category: 'agents', slug: 'todo-list', name: 'Todo List', description: '', implemented: true),
-  CatalogEntry(key: 'agents/code-block', category: 'agents', slug: 'code-block', name: 'Code Block', description: '', implemented: false),
+  CatalogEntry(key: 'agents/code-block', category: 'agents', slug: 'code-block', name: 'Code Block', description: '', implemented: true),
   CatalogEntry(key: 'agents/approval-card-question', category: 'agents', slug: 'approval-card-question', name: 'Questions', description: 'Guides the user through single-choice, multiple-choice, and freeform questions before returning the completed response to the agent.', implemented: false),
   CatalogEntry(key: 'agents/approval-card-review', category: 'agents', slug: 'approval-card-review', name: 'Review and Approve', description: 'Pauses an agent workflow for approval, revision, or rejection and collapses into the recorded decision.', implemented: false),
   CatalogEntry(key: 'agents/tool-result-terminal', category: 'agents', slug: 'tool-result-terminal', name: 'Terminal Output', description: 'Streams command output into a bounded viewport, follows new lines, then collapses into the completed run summary.', implemented: true),
-  CatalogEntry(key: 'agents/file-diff', category: 'agents', slug: 'file-diff', name: 'File Diff', description: '', implemented: false),
+  CatalogEntry(key: 'agents/file-diff', category: 'agents', slug: 'file-diff', name: 'File Diff', description: '', implemented: true),
   CatalogEntry(key: 'agents/tool-result-request', category: 'agents', slug: 'tool-result-request', name: 'Request Result', description: 'Presents an in-flight request and its highlighted response payload with retry and copy actions.', implemented: false),
   CatalogEntry(key: 'agents/streaming-response', category: 'agents', slug: 'streaming-response', name: 'Streaming Response', description: '', implemented: true),
-  CatalogEntry(key: 'agents/image-generation', category: 'agents', slug: 'image-generation', name: 'Image Generation', description: '', implemented: false),
+  CatalogEntry(key: 'agents/image-generation', category: 'agents', slug: 'image-generation', name: 'Image Generation', description: '', implemented: true),
   CatalogEntry(key: 'agents/tool-approval', category: 'agents', slug: 'tool-approval', name: 'Tool Approval', description: '', implemented: false),
   CatalogEntry(key: 'agents/citations', category: 'agents', slug: 'citations', name: 'Citations', description: '', implemented: true),
   CatalogEntry(key: 'agents/agent-activity-text', category: 'agents', slug: 'agent-activity-text', name: 'Streaming Text', description: 'Streams freeform reasoning text into the capped viewport and keeps the completed log available behind a timed disclosure.', implemented: false),
@@ -144,6 +147,7 @@ const catalog = <CatalogEntry>[
   CatalogEntry(key: 'motion/shader-background', category: 'motion', slug: 'shader-background', name: 'Shader Background', description: '', implemented: false),
   CatalogEntry(key: 'motion/cylinder-carousel', category: 'motion', slug: 'cylinder-carousel', name: 'Cylinder Carousel', description: '', implemented: false),
   CatalogEntry(key: 'motion/loader', category: 'motion', slug: 'loader', name: 'Loader', description: '', implemented: false),
+  CatalogEntry(key: 'motion/morphic-tooltip', category: 'motion', slug: 'morphic-tooltip', name: 'Morphic Tooltip', description: 'A shared-layout tooltip primitive with one animated surface that morphs between triggers for polished hover and focus hints.', implemented: true, sourceUrl: 'https://pro.beui.dev/components/morphic-tooltip'),
 ];
 
 List<CatalogEntry> catalogFor(String category, {bool liveOnly = true}) {

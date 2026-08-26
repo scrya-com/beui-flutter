@@ -62,6 +62,8 @@ flutter run -d ios
 
 Each demo has a **React ↗** link to the matching page on beui.dev.
 
+Catalog **cards** pause off-screen tickers (`VisibleTicker`). Open a card for the full, copyable usage. Do not port `VisibleTicker` into an app unless you are also rendering a grid of live previews.
+
 ## Checks
 
 ```bash

@@ -91,6 +91,7 @@ class _BeuiButtonState extends State<BeuiButton>
   }
 
   void _syncScale() {
+    if (!mounted) return;
     if (beuiReduceMotion(context) || !_canPress) {
       _scale.jump(1);
       return;

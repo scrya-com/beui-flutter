@@ -2,6 +2,19 @@
 
 Port of beUI (`ui-components`) to Flutter. Catalog, motion tokens, and interaction contracts come from the React library. Do not invent a parallel design system.
 
+## Reference implementations
+
+Read the source first. Do not invent a widget from a screenshot, the docs chrome, or a remembered API.
+
+| What | Where |
+|---|---|
+| Free catalog | Sibling `../ui-components` — `components/{motion,agents,blocks}/`, matching `components/previews/`. Live copies: `https://beui.dev/r/{slug}` and `https://beui.dev/r/{slug}/raw`. |
+| Motion numbers | `../ui-components/lib/ease.ts`. Solver: vendored `crates/ui_physics` (from `../uikit`). |
+| Flutter animation / gesture patterns | `../uikit/ui/lib/uikit/` when a UIView-style animator or physics helper already exists. Reuse; do not re-derive. |
+| Pro | `https://pro.beui.dev/r/{name}.json` with `BEUI_PRO_TOKEN`. A public preview is not the source. Do not approximate a Pro block. |
+
+`get_component` / `npx shadcn@latest view @beui/<slug>` is the same source as the sibling files. If the registry 401s, stop and ask for the token.
+
 ## Commands
 
 ```bash
@@ -24,14 +37,28 @@ Already-hit constraints — treat a recurrence as a bug, not a given:
 | Detection | Fix immediately |
 |---|---|
 | `mouse_tracker.dart` `_debugDuringDeviceUpdate` | Never `setState` inside `MouseRegion`/`Listener` hover callbacks. Use `beuiAfterPointer`. |
-| Catalog or agent controls have no motion | Do not wrap previews in `TickerMode(enabled: false)` to pass tests. Convert `Timer`/`Future.delayed` to `AnimationController` so dispose is clean. |
+| Catalog or opened demo has no motion | Do not freeze the **demo page** or tests with `TickerMode(enabled: false)`. Convert `Timer`/`Future.delayed` to `AnimationController`. Catalog **cards** wrap the live preview in `VisibleTicker` so off-screen demos stop ticking. |
 | `BeuiSpringBuilder` / pop-in never moves | A spring that starts at the target value is a no-op. Mount-only motion starts at 0 and `animateTo(1)` after the first frame (`BeuiPopIn`). |
 | DevTools shows light list rows / "Soon" / old chrome | A stale `flutter run` is still bound to `:8095`. Kill it, restart with **current** `apps/gallery`, confirm the screenshot is the card catalog. |
 | `flutter run -d web-server` paints a black/empty page | Switch to `-d chrome`. `web-server` is not a visual target. |
 | Tests fail on pending timers after dispose | Cancel every ticker in `dispose`. Do not freeze the whole tree. |
 | `defaultTargetPlatform` is Android on Flutter web | `kIsWeb` is hover-capable (`beuiHoverCapable`). |
+| `A ticker was started twice` | `BeuiSpringValue.animateTo` must stop-then-start. Hover (`beuiAfterPointer`) and press both retarget in one frame. |
+| `State no longer has a context` after hover | `beuiAfterPointer` can run after dispose. Return if `!mounted` before reading `context`. |
+| `RenderFlex overflowed` on a catalog card | `Transform.scale` does not shrink layout. Wrap the scaled stage in `OverflowBox` + `ClipRect` (`CatalogPreviewFit`). |
+| Chrome long tasks while scrolling the catalog | Off-screen cards must not keep tickers. `addAutomaticKeepAlives: false` + `VisibleTicker`. |
 
 If DevTools, `flutter test`, or `flutter analyze` disagrees with the intended UI, the test or the widget is wrong — fix that widget before adding the next slug.
+
+## Logs
+
+Yellow/black stripes and frozen press springs dump here — read them, then fix the widget:
+
+1. **Chrome DevTools → Console** on the Flutter tab (`http://127.0.0.1:8095/`). Filter Errors. Flutter prints the owning `State` (`_BeuiButtonState`) and the Dart frame (`spring_motion.dart:64`).
+2. **`flutter run` terminal** — same dump, including the widget that created the ticker.
+3. **Agent:** `chrome-devtools__list_pages`, then `chrome-devtools__list_console_messages` with `types: ["error","warn"]` and `includeStackTraces: true`.
+
+Do not guess from a screenshot. The console names the widget; the stack names the line.
 
 ## Motion
 
@@ -58,6 +85,17 @@ bun tools/export-catalog.mjs
 ```
 
 Gallery cards are landing-style: live scaled preview, title, description. Agent pages group the same way as `beui.dev/components/agents`.
+
+### Usage
+
+| Surface | Recommendation |
+|---|---|
+| Catalog card grid | Live preview inside `VisibleTicker` → `CatalogPreviewFit` → `IgnorePointer`. Off-screen cards must not keep `AutomaticKeepAlive`. Chrome long tasks while scrolling mean a demo is still ticking in the cache. |
+| Opened demo page | Full tickers, no `VisibleTicker`. This is the copyable usage surface — follow, stream, hover, and press must run. |
+| App embedding | Same as the demo page. Do not copy `VisibleTicker` into product UI unless the host is a scrolling wall of live previews. |
+| Tests | Do not wrap the tree in `TickerMode(enabled: false)` to hide pending timers. Cancel controllers in `dispose`. |
+
+`VisibleTicker` is gallery chrome, not a library widget. It only pauses motion when the card leaves the window; it does not replace `beuiReduceMotion`.
 
 ## API mapping
 

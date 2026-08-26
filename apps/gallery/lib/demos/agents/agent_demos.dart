@@ -18,7 +18,11 @@ class AgentProgressDemo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const BeuiAgentProgress(label: 'Churning', initialSeconds: 151.6);
+    return const BeuiAgentProgress(
+      label: 'Churning',
+      initialSeconds: 151.6,
+      fontSize: 16,
+    );
   }
 }
 
@@ -387,37 +391,290 @@ class MessageDemo extends StatelessWidget {
   }
 }
 
-class MessageScrollerDemo extends StatelessWidget {
+class _ThreadMessage {
+  _ThreadMessage({
+    required this.id,
+    required this.from,
+    required this.content,
+    this.streaming = false,
+    this.animateIn = false,
+  });
+
+  final String id;
+  final BeuiMessageFrom from;
+  String content;
+  bool streaming;
+  final bool animateIn;
+}
+
+class MessageScrollerDemo extends StatefulWidget {
   const MessageScrollerDemo({super.key});
 
   @override
+  State<MessageScrollerDemo> createState() => _MessageScrollerDemoState();
+}
+
+class _MessageScrollerDemoState extends State<MessageScrollerDemo>
+    with TickerProviderStateMixin {
+  static const _reply =
+      'The viewport follows while you stay at the live edge. Scroll upward while this response streams and it will leave your reading position alone.';
+
+  late final AnimationController _pending;
+  late final AnimationController _stream;
+  int _run = 0;
+  int _pendingRun = 0;
+  bool _waiting = false;
+  String? _streamId;
+  String _streamFull = '';
+
+  final List<_ThreadMessage> _messages = [
+    _ThreadMessage(
+      id: 'scope-question',
+      from: BeuiMessageFrom.user,
+      content: 'What should the first release include?',
+    ),
+    _ThreadMessage(
+      id: 'scope-answer',
+      from: BeuiMessageFrom.assistant,
+      content: 'Start with the smallest workflow that still feels complete.',
+    ),
+    _ThreadMessage(
+      id: 'states-question',
+      from: BeuiMessageFrom.user,
+      content: 'Include streaming and recovery states too.',
+    ),
+    _ThreadMessage(
+      id: 'states-answer',
+      from: BeuiMessageFrom.assistant,
+      content: 'Yes. Those states make the first version feel dependable.',
+    ),
+    _ThreadMessage(
+      id: 'evidence-question',
+      from: BeuiMessageFrom.user,
+      content: 'How should we present tool results?',
+    ),
+    _ThreadMessage(
+      id: 'evidence-answer',
+      from: BeuiMessageFrom.assistant,
+      content: 'Keep results close to the action that produced them.',
+    ),
+    _ThreadMessage(
+      id: 'approval-question',
+      from: BeuiMessageFrom.user,
+      content: 'What about actions that need confirmation?',
+    ),
+    _ThreadMessage(
+      id: 'approval-answer',
+      from: BeuiMessageFrom.assistant,
+      content: 'Pause the run, explain the impact, and ask before continuing.',
+    ),
+    _ThreadMessage(
+      id: 'summary-question',
+      from: BeuiMessageFrom.user,
+      content: 'Can the transcript stay easy to navigate?',
+    ),
+    _ThreadMessage(
+      id: 'summary-answer',
+      from: BeuiMessageFrom.assistant,
+      content: 'Use the rail to jump between turns without losing your place.',
+    ),
+  ];
+
+  bool get _loading => _waiting || _streamId != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _pending = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 420),
+    )..addStatusListener((s) {
+        if (s == AnimationStatus.completed) _beginStream();
+      });
+    _stream = AnimationController(vsync: this, duration: const Duration(seconds: 1))
+      ..addListener(_onStreamTick)
+      ..addStatusListener((s) {
+        if (s == AnimationStatus.completed) _finishStream();
+      });
+  }
+
+  @override
+  void dispose() {
+    _pending.dispose();
+    _stream.dispose();
+    super.dispose();
+  }
+
+  void _submit(String prompt, String? _) {
+    if (_loading || prompt.trim().isEmpty) return;
+    final run = _run++;
+    _pendingRun = run;
+    setState(() {
+      _messages.add(
+        _ThreadMessage(
+          id: 'sent-user-$run',
+          from: BeuiMessageFrom.user,
+          content: prompt,
+          animateIn: true,
+        ),
+      );
+      _waiting = true;
+    });
+    if (beuiReduceMotion(context)) {
+      _beginStream();
+    } else {
+      _pending.forward(from: 0);
+    }
+  }
+
+  void _beginStream() {
+    if (!mounted) return;
+    final id = 'sent-assistant-$_pendingRun';
+    setState(() {
+      _waiting = false;
+      _streamId = id;
+      _streamFull = _reply;
+      _messages.add(
+        _ThreadMessage(
+          id: id,
+          from: BeuiMessageFrom.assistant,
+          content: '',
+          streaming: true,
+          animateIn: true,
+        ),
+      );
+    });
+    if (beuiReduceMotion(context)) {
+      _finishStream();
+      return;
+    }
+    final ms = 140 + (_reply.length / 96 * 1000).round();
+    _stream.duration = Duration(milliseconds: ms);
+    _stream.forward(from: 0);
+  }
+
+  void _onStreamTick() {
+    if (_streamId == null) return;
+    final duration = _stream.duration ?? Duration.zero;
+    final elapsed = duration.inMilliseconds * _stream.value;
+    final cursor = ((elapsed - 140) / 1000 * 96).floor().clamp(0, _streamFull.length);
+    final next = _streamFull.substring(0, cursor);
+    _ThreadMessage? msg;
+    for (final m in _messages) {
+      if (m.id == _streamId) {
+        msg = m;
+        break;
+      }
+    }
+    final target = msg;
+    if (target == null || target.content == next) return;
+    setState(() => target.content = next);
+  }
+
+  void _finishStream() {
+    if (!mounted || _streamId == null) return;
+    setState(() {
+      for (final m in _messages) {
+        if (m.id == _streamId) {
+          m
+            ..content = _streamFull
+            ..streaming = false;
+        }
+      }
+      _streamId = null;
+    });
+  }
+
+  void _stop() {
+    _pending.stop();
+    _stream.stop();
+    setState(() {
+      _waiting = false;
+      for (final m in _messages) {
+        if (m.streaming) m.streaming = false;
+      }
+      _streamId = null;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const SizedBox(
-      width: 420,
-      child: BeuiMessageScroller(
-        height: 320,
-        children: [
-          BeuiMessageBubble(
-            align: BeuiMessageAlign.end,
-            variant: BeuiMessageBubbleVariant.solid,
-            child: Text('What should the first release include?'),
-          ),
-          BeuiMessageBubble(
-            align: BeuiMessageAlign.start,
-            variant: BeuiMessageBubbleVariant.soft,
-            child: Text('Start with the smallest workflow that still feels complete.'),
-          ),
-          BeuiMessageBubble(
-            align: BeuiMessageAlign.end,
-            variant: BeuiMessageBubbleVariant.solid,
-            child: Text('Include streaming and recovery states too.'),
-          ),
-          BeuiMessageBubble(
-            align: BeuiMessageAlign.start,
-            variant: BeuiMessageBubbleVariant.soft,
-            child: Text('Yes. Those states make the first version feel dependable.'),
-          ),
-        ],
+    final colors = context.beuiColors;
+    return SizedBox(
+      width: 440,
+      height: 440,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.background,
+          borderRadius: BorderRadius.circular(BeuiRadii.card),
+          border: Border.all(color: colors.border.withValues(alpha: 0.7)),
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: BeuiMessageScroller(
+                height: null,
+                busy: _loading,
+                navigation: BeuiMessageScrollerNavigation.rail,
+                children: [
+                  for (final message in _messages)
+                    BeuiScrollerMessage(
+                      id: message.id,
+                      from: message.from,
+                      text: message.content,
+                      child: BeuiMessageBubble(
+                        align: message.from == BeuiMessageFrom.user
+                            ? BeuiMessageAlign.end
+                            : BeuiMessageAlign.start,
+                        variant: message.from == BeuiMessageFrom.user
+                            ? BeuiMessageBubbleVariant.solid
+                            : BeuiMessageBubbleVariant.soft,
+                        animateIn: message.animateIn &&
+                            message.from == BeuiMessageFrom.user,
+                        child: message.from == BeuiMessageFrom.assistant
+                            ? BeuiStreamingResponse(
+                                status: message.streaming
+                                    ? BeuiStreamingStatus.streaming
+                                    : BeuiStreamingStatus.complete,
+                                showActions: false,
+                                copyText: message.content,
+                                child: Text(
+                                  message.content.isEmpty
+                                      ? '…'
+                                      : message.content,
+                                ),
+                              )
+                            : Text(message.content),
+                      ),
+                    ),
+                  if (_waiting)
+                    const BeuiScrollerMessage(
+                      id: 'pending-assistant',
+                      from: BeuiMessageFrom.assistant,
+                      text: 'Preparing response',
+                      child: BeuiMessageBubble(
+                        child: Text('Preparing response'),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: colors.border.withValues(alpha: 0.6))),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: BeuiPromptInput(
+                  placeholder: 'Send another message…',
+                  loading: _loading,
+                  onSubmit: _submit,
+                  onStop: _stop,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -747,4 +1004,249 @@ class _AgentActivityDemoState extends State<AgentActivityDemo>
       ),
     );
   }
+}
+
+const _codeLines = [
+  'import { generateText } from "ai";',
+  '',
+  'export async function summarize(input: string) {',
+  '  const { text } = await generateText({',
+  '    model: "openai/gpt-5",',
+  '    prompt: `Summarize this clearly: \${input}`,',
+  '  });',
+  '',
+  '  return {',
+  '    text,',
+  '    generatedAt: new Date().toISOString(),',
+  '  };',
+  '}',
+];
+
+class CodeBlockDemo extends StatefulWidget {
+  const CodeBlockDemo({super.key});
+
+  @override
+  State<CodeBlockDemo> createState() => _CodeBlockDemoState();
+}
+
+class _CodeBlockDemoState extends State<CodeBlockDemo>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _clock;
+  int _visible = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _clock = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 260),
+    )
+      ..addStatusListener((s) {
+        if (s == AnimationStatus.completed &&
+            _visible < _codeLines.length &&
+            mounted) {
+          setState(() => _visible++);
+          if (_visible < _codeLines.length) _clock.forward(from: 0);
+        }
+      })
+      ..forward();
+  }
+
+  @override
+  void dispose() {
+    _clock.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final complete = _visible >= _codeLines.length;
+    return SizedBox(
+      width: 440,
+      child: BeuiCodeBlock(
+        filename: 'summarize.ts',
+        language: 'typescript',
+        code: _codeLines.take(_visible).join('\n'),
+        status: complete
+            ? BeuiCodeBlockStatus.complete
+            : BeuiCodeBlockStatus.streaming,
+        highlightLines: const [4, 5, 6, 7],
+        maxHeight: 224,
+      ),
+    );
+  }
+}
+
+const _diffLines = [
+  BeuiFileDiffLine(id: '1', oldLine: 18, newLine: 18, content: 'export async function runTask() {'),
+  BeuiFileDiffLine(
+    id: '2',
+    type: BeuiFileDiffLineType.removed,
+    oldLine: 19,
+    content: '  return execute(task);',
+  ),
+  BeuiFileDiffLine(
+    id: '3',
+    type: BeuiFileDiffLineType.added,
+    newLine: 19,
+    content: '  const result = await execute(task);',
+  ),
+  BeuiFileDiffLine(
+    id: '4',
+    type: BeuiFileDiffLineType.added,
+    newLine: 20,
+    content: '  return normalize(result);',
+  ),
+  BeuiFileDiffLine(id: '5', oldLine: 20, newLine: 21, content: '}'),
+];
+
+class FileDiffDemo extends StatefulWidget {
+  const FileDiffDemo({super.key});
+
+  @override
+  State<FileDiffDemo> createState() => _FileDiffDemoState();
+}
+
+class _FileDiffDemoState extends State<FileDiffDemo>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _clock;
+  int _visible = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _clock = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 360),
+    )
+      ..addStatusListener((s) {
+        if (s == AnimationStatus.completed &&
+            _visible < _diffLines.length &&
+            mounted) {
+          setState(() => _visible++);
+          if (_visible < _diffLines.length) _clock.forward(from: 0);
+        }
+      })
+      ..forward();
+  }
+
+  @override
+  void dispose() {
+    _clock.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final complete = _visible >= _diffLines.length;
+    return SizedBox(
+      width: 440,
+      child: BeuiFileDiff(
+        file: 'src/runner.ts',
+        lines: _diffLines.take(_visible).toList(),
+        status: complete
+            ? BeuiFileDiffStatus.complete
+            : BeuiFileDiffStatus.streaming,
+        copyText: _diffLines.map((l) => l.content).join('\n'),
+        maxHeight: 150,
+      ),
+    );
+  }
+}
+
+class ImageGenerationDemo extends StatefulWidget {
+  const ImageGenerationDemo({super.key});
+
+  @override
+  State<ImageGenerationDemo> createState() => _ImageGenerationDemoState();
+}
+
+class _ImageGenerationDemoState extends State<ImageGenerationDemo>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _clock;
+  BeuiImageGenerationStatus _status = BeuiImageGenerationStatus.queued;
+
+  static const _steps = [
+    BeuiImageGenerationStatus.queued,
+    BeuiImageGenerationStatus.generating,
+    BeuiImageGenerationStatus.refining,
+    BeuiImageGenerationStatus.complete,
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _clock = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )
+      ..addStatusListener((s) {
+        if (s == AnimationStatus.completed && mounted) {
+          final i = _steps.indexOf(_status);
+          if (i < _steps.length - 1) {
+            setState(() => _status = _steps[i + 1]);
+            _clock.forward(from: 0);
+          }
+        }
+      })
+      ..forward();
+  }
+
+  @override
+  void dispose() {
+    _clock.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 360,
+      child: BeuiImageGeneration(
+        status: _status,
+        prompt: 'A quiet valley at dusk',
+        resolution: '800×600',
+        child: const CustomPaint(
+          painter: _DemoArtPainter(),
+          child: SizedBox.expand(),
+        ),
+      ),
+    );
+  }
+}
+
+class _DemoArtPainter extends CustomPainter {
+  const _DemoArtPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final sky = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF191B33), Color(0xFF60538D), Color(0xFFE59B7B)],
+      ).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size, sky);
+    canvas.drawCircle(
+      Offset(size.width * 0.71, size.height * 0.35),
+      size.width * 0.08,
+      Paint()..color = const Color(0xFFFFE5AD),
+    );
+    final ground = Path()
+      ..moveTo(0, size.height * 0.66)
+      ..lineTo(size.width * 0.15, size.height * 0.52)
+      ..lineTo(size.width * 0.27, size.height * 0.61)
+      ..lineTo(size.width * 0.43, size.height * 0.37)
+      ..lineTo(size.width * 0.58, size.height * 0.58)
+      ..lineTo(size.width * 0.68, size.height * 0.47)
+      ..lineTo(size.width * 0.79, size.height * 0.62)
+      ..lineTo(size.width, size.height * 0.52)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(ground, Paint()..color = const Color(0xFF283D43));
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

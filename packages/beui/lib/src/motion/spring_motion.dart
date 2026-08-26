@@ -61,7 +61,17 @@ class BeuiSpringValue extends ChangeNotifier {
     _to = next;
     _elapsed = 0;
     _running = true;
-    _ticker?.start();
+    _restartTicker();
+  }
+
+  /// Retargeting must restart: [_elapsed] is reset, so a live ticker's
+  /// elapsed would skip the new rest-to-rest curve. Hover + press both
+  /// call [animateTo] in the same frame; starting twice asserts.
+  void _restartTicker() {
+    final ticker = _ticker;
+    if (ticker == null) return;
+    if (ticker.isActive) ticker.stop();
+    ticker.start();
   }
 
   void _tick(Duration elapsed) {

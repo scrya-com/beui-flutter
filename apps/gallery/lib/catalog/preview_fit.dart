@@ -32,10 +32,18 @@ class CatalogPreviewFit extends StatelessWidget {
                 .clamp(minScale, maxScale) *
             (hover ? hoverLift : 1);
 
+        // Transform.scale does not shrink layout. Without OverflowBox the
+        // unscaled 460-wide stage reports its full height into the card
+        // Column and paints a yellow/black overflow stripe (~30px).
         return ColoredBox(
           color: colors.background,
           child: ClipRect(
-            child: Center(
+            child: OverflowBox(
+              alignment: Alignment.center,
+              minWidth: 0,
+              minHeight: 0,
+              maxWidth: double.infinity,
+              maxHeight: double.infinity,
               child: Transform.scale(
                 scale: scale,
                 child: IgnorePointer(

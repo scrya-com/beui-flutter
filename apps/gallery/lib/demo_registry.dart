@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'demos/agents/agent_demos.dart';
 import 'demos/motion/button_demos.dart';
 import 'demos/motion/form_demos.dart';
+import 'demos/motion/tooltip_demos.dart';
 
 typedef DemoBuilder = Widget Function();
 
@@ -17,6 +18,7 @@ final demoBuilders = <String, DemoBuilder>{
   'motion/radio': () => const RadioDemo(),
   'motion/input': () => const InputDemo(),
   'motion/tabs': () => const TabsDemo(),
+  'motion/morphic-tooltip': () => const MorphicTooltipDemo(),
   'agents/thinking-shimmer': () => const ThinkingShimmerDemo(),
   'agents/agent-progress': () => const AgentProgressDemo(),
   'agents/reasoning-text': () => const ReasoningTextDemo(),
@@ -33,4 +35,7 @@ final demoBuilders = <String, DemoBuilder>{
   'agents/tool-result': () => const ToolResultDemo(),
   'agents/agent-activity-mixed': () => const AgentActivityDemo(),
   'agents/agent-activity': () => const AgentActivityDemo(),
+  'agents/code-block': () => const CodeBlockDemo(),
+  'agents/file-diff': () => const FileDiffDemo(),
+  'agents/image-generation': () => const ImageGenerationDemo(),
 };

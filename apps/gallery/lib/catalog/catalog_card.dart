@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import '../demo_registry.dart';
 import 'catalog.dart';
 import 'preview_fit.dart';
+import 'visible_ticker.dart';
 
 /// Landing-style catalog tile: live preview well + title + description.
 class CatalogCard extends StatefulWidget {
@@ -62,9 +63,11 @@ class _CatalogCardState extends State<CatalogCard> {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(20),
                     child: live
-                        ? CatalogPreviewFit(
-                            hover: _hover,
-                            child: preview!(),
+                        ? VisibleTicker(
+                            child: CatalogPreviewFit(
+                              hover: _hover,
+                              child: preview!(),
+                            ),
                           )
                         : ColoredBox(
                             color: colors.background,
