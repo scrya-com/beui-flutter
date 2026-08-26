@@ -46,8 +46,7 @@ class _BeuiAgentProgressState extends State<BeuiAgentProgress>
     _pulse = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1600),
-    )..repeat();
-    _arm();
+    );
   }
 
   @override
@@ -59,9 +58,23 @@ class _BeuiAgentProgressState extends State<BeuiAgentProgress>
     }
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!TickerMode.valuesOf(context).enabled) {
+      _timer?.cancel();
+      _timer = null;
+      _pulse.stop();
+    } else {
+      if (!_pulse.isAnimating && !beuiReduceMotion(context)) _pulse.repeat();
+      _arm();
+    }
+  }
+
   void _arm() {
     _timer?.cancel();
     if (_controlled || !widget.running) return;
+    if (!TickerMode.valuesOf(context).enabled) return;
     final started = DateTime.now().subtract(
       Duration(milliseconds: (widget.initialSeconds * 1000).round()),
     );

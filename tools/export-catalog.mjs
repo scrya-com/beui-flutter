@@ -17,14 +17,37 @@ const keys = [...previews.matchAll(/"((?:motion|agents|blocks)\/[^"]+)"\s*:/g)].
 );
 
 const names = new Map();
+const descriptions = new Map();
 let pendingName = "";
+let pendingDesc = "";
+let descBuf = null;
 for (const line of registry.split("\n")) {
+  if (descBuf !== null) {
+    descBuf += " " + line.trim();
+    if (/"\s*,?\s*$/.test(line) || line.includes('",')) {
+      const m = descBuf.match(/"([\s\S]*)"/);
+      if (m) pendingDesc = m[1].replace(/\s+/g, " ").trim();
+      descBuf = null;
+    }
+    continue;
+  }
   const name = line.match(/name:\s+"([^"]+)"/);
   if (name) pendingName = name[1];
+  if (line.includes("description:")) {
+    const one = line.match(/description:\s+"([^"]*)"/);
+    if (one) pendingDesc = one[1];
+    else descBuf = line;
+  }
   const preview = line.match(/previewKey:\s+"([^"]+)"/);
-  if (preview && pendingName) names.set(preview[1], pendingName);
+  if (preview && pendingName) {
+    names.set(preview[1], pendingName);
+    if (pendingDesc) descriptions.set(preview[1], pendingDesc);
+  }
   const install = line.match(/installSlug:\s+"([^"]+)"/);
-  if (install && pendingName) names.set(install[1], pendingName);
+  if (install && pendingName) {
+    names.set(install[1], pendingName);
+    if (pendingDesc) descriptions.set(install[1], pendingDesc);
+  }
 }
 
 const implemented = new Set([
@@ -59,14 +82,24 @@ const title = (key) => {
     .join(" ");
 };
 
+const dartStr = (s) =>
+  s.replace(/\\/g, "\\\\").replace(/\$/g, "\\$").replace(/'/g, "\\'");
+
 const entries = keys.map((key) => {
   const [category, ...rest] = key.split("/");
   const slug = rest.join("/");
+  const parent = `${category}/${slug.split("-")[0]}`;
+  const description =
+    descriptions.get(key) ||
+    descriptions.get(`${category}/${slug}`) ||
+    descriptions.get(parent) ||
+    "";
   return {
     key,
     category,
     slug,
     name: title(key),
+    description,
     implemented: implemented.has(key),
   };
 });
@@ -78,6 +111,7 @@ class CatalogEntry {
     required this.category,
     required this.slug,
     required this.name,
+    required this.description,
     required this.implemented,
   });
 
@@ -85,6 +119,7 @@ class CatalogEntry {
   final String category;
   final String slug;
   final String name;
+  final String description;
   final bool implemented;
 
   String get reactUrl =>
@@ -95,20 +130,88 @@ const catalog = <CatalogEntry>[
 ${entries
   .map(
     (e) =>
-      `  CatalogEntry(key: '${e.key}', category: '${e.category}', slug: '${e.slug}', name: '${e.name.replace(/'/g, "\\'")}', implemented: ${e.implemented}),`,
+      `  CatalogEntry(key: '${e.key}', category: '${e.category}', slug: '${e.slug}', name: '${dartStr(e.name)}', description: '${dartStr(e.description)}', implemented: ${e.implemented}),`,
   )
   .join("\n")}
 ];
 
 List<CatalogEntry> catalogFor(String category, {bool liveOnly = true}) {
-  final items = catalog.where((e) => e.category == category).toList()
-    ..sort((a, b) {
-      if (a.implemented == b.implemented) return a.name.compareTo(b.name);
-      return a.implemented ? -1 : 1;
-    });
+  final items = catalog.where((e) => e.category == category).toList();
   if (liveOnly) return items.where((e) => e.implemented).toList();
   return items;
 }
+
+class CatalogCopy {
+  const CatalogCopy({
+    required this.heading,
+    required this.description,
+  });
+  final String heading;
+  final String description;
+}
+
+const categoryCopy = <String, CatalogCopy>{
+  'motion': CatalogCopy(
+    heading: 'Animated Flutter components',
+    description:
+        'Explore animated Flutter widgets ported from beUI. Same springs, same interaction contracts, copy the Dart source into your app.',
+  ),
+  'blocks': CatalogCopy(
+    heading: 'Animated Flutter UI blocks',
+    description:
+        'Product-ready animated blocks. Copy complete interactions into your app and adapt the source to your product.',
+  ),
+  'agents': CatalogCopy(
+    heading: 'Animated AI agent components',
+    description:
+        'Build clear, responsive AI experiences with components for agent reasoning, progress, tool activity, and conversation states.',
+  ),
+};
+
+class CatalogGroup {
+  const CatalogGroup({
+    required this.title,
+    required this.description,
+    required this.slugs,
+  });
+  final String title;
+  final String description;
+  final List<String> slugs;
+}
+
+const agentGroups = <CatalogGroup>[
+  CatalogGroup(
+    title: 'Conversation components',
+    description:
+        'Compose prompts, arrange sender-aware messages, shape conversational surfaces, and keep streamed turns stable while the reader moves through the transcript.',
+    slugs: ['prompt-input', 'message', 'message-bubble', 'message-scroller'],
+  ),
+  CatalogGroup(
+    title: 'Response and evidence components',
+    description:
+        'Render rich answers as they arrive, reveal completion actions at the right time, and connect generated claims to inspectable sources.',
+    slugs: ['streaming-response', 'image-generation', 'citations'],
+  ),
+  CatalogGroup(
+    title: 'Progress and planning components',
+    description:
+        'Communicate unknown waits, durable task plans, and chronological agent activity without inventing precision or exposing an unfiltered trace.',
+    slugs: ['thinking-shimmer', 'agent-progress', 'reasoning-text', 'todo-list', 'agent-activity'],
+  ),
+  CatalogGroup(
+    title: 'Tool and code components',
+    description:
+        'Present execution outcomes, generated source, and file changes with bounded streaming, stable highlighting, and inspectable completion states.',
+    slugs: ['tool-result', 'code-block', 'file-diff'],
+  ),
+  CatalogGroup(
+    title: 'Human-in-the-loop components',
+    description:
+        'Pause agent work for a scoped permission, clarification, review, or decision, then preserve the resolved outcome in the run history.',
+    slugs: ['tool-approval', 'approval-card'],
+  ),
+];
+
 `;
 
 writeFileSync(dest, dart);

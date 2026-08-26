@@ -2,12 +2,14 @@ import 'package:beui_gallery/main.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('gallery lists live demos in dark mode', (tester) async {
+  testWidgets('gallery shows the upstream-style catalog', (tester) async {
     await tester.pumpWidget(const BeuiGalleryApp());
-    expect(find.text('beUI for Flutter'), findsOneWidget);
-    expect(find.text('Components'), findsOneWidget);
-    expect(find.text('Live'), findsWidgets);
-    expect(find.text('Soon'), findsNothing);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(find.text('beUI'), findsOneWidget);
+    expect(find.text('Agents'), findsOneWidget);
+    expect(find.text('Animated AI agent components'), findsOneWidget);
+    expect(find.text('Conversation components'), findsOneWidget);
     expect(find.textContaining('Not ported yet'), findsNothing);
   });
 }

@@ -3,13 +3,13 @@ import 'package:flutter/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'catalog/catalog.dart';
+import 'catalog/catalog_card.dart';
 import 'demo_registry.dart';
 
 void main() {
   runApp(const BeuiGalleryApp());
 }
 
-/// Dark-only gallery. Matches beUI's dark tokens (`#151515` / `#1C1C1C`).
 class BeuiGalleryApp extends StatefulWidget {
   const BeuiGalleryApp({super.key});
 
@@ -21,7 +21,6 @@ class _BeuiGalleryAppState extends State<BeuiGalleryApp> {
   BeuiColorTheme colorTheme = BeuiColorTheme.mono;
   String category = 'agents';
   String? selectedKey;
-  bool showRemaining = false;
 
   @override
   Widget build(BuildContext context) {
@@ -56,22 +55,33 @@ class _BeuiGalleryAppState extends State<BeuiGalleryApp> {
               style: TextStyle(
                 color: colors.foreground,
                 fontSize: 14,
+                height: 1.45,
               ),
-              child: selectedKey == null
-                  ? _CatalogPage(
-                      category: category,
-                      colorTheme: colorTheme,
-                      showRemaining: showRemaining,
-                      onCategory: (v) => setState(() => category = v),
-                      onSelect: (k) => setState(() => selectedKey = k),
-                      onColorTheme: (t) => setState(() => colorTheme = t),
-                      onToggleRemaining: () =>
-                          setState(() => showRemaining = !showRemaining),
-                    )
-                  : _DemoPage(
-                      entry: catalog.firstWhere((e) => e.key == selectedKey),
-                      onBack: () => setState(() => selectedKey = null),
-                    ),
+              child: Column(
+                children: [
+                  _SiteHeader(
+                    category: category,
+                    colorTheme: colorTheme,
+                    onCategory: (v) => setState(() {
+                      category = v;
+                      selectedKey = null;
+                    }),
+                    onColorTheme: (t) => setState(() => colorTheme = t),
+                  ),
+                  Expanded(
+                    child: selectedKey == null
+                        ? _CatalogBody(
+                            category: category,
+                            onSelect: (k) => setState(() => selectedKey = k),
+                          )
+                        : _DemoPage(
+                            entry: catalog.firstWhere((e) => e.key == selectedKey),
+                            category: category,
+                            onBack: () => setState(() => selectedKey = null),
+                          ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -80,289 +90,448 @@ class _BeuiGalleryAppState extends State<BeuiGalleryApp> {
   }
 }
 
-class _CatalogPage extends StatelessWidget {
-  const _CatalogPage({
+class _SiteHeader extends StatelessWidget {
+  const _SiteHeader({
     required this.category,
     required this.colorTheme,
-    required this.showRemaining,
     required this.onCategory,
-    required this.onSelect,
     required this.onColorTheme,
-    required this.onToggleRemaining,
   });
 
   final String category;
   final BeuiColorTheme colorTheme;
-  final bool showRemaining;
   final ValueChanged<String> onCategory;
-  final ValueChanged<String> onSelect;
   final ValueChanged<BeuiColorTheme> onColorTheme;
-  final VoidCallback onToggleRemaining;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.beuiColors;
-    final live = catalogFor(category, liveOnly: true);
-    final rest = catalogFor(category, liveOnly: false)
-        .where((e) => !e.implemented)
-        .toList();
-    final items = showRemaining ? [...live, ...rest] : live;
-    final done = live.length;
+    final tab = switch (category) {
+      'blocks' => 'blocks',
+      'agents' => 'agents',
+      _ => 'components',
+    };
+    return ColoredBox(
+      color: colors.background.withValues(alpha: 0.7),
+      child: SafeArea(
+        bottom: false,
+        child: SizedBox(
+          height: 56,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                const _Mark(),
+                const SizedBox(width: 10),
+                Text(
+                  'beUI',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.2,
+                    color: colors.foreground,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        BeuiTabs(
+                          value: tab,
+                          onChanged: (v) => onCategory(switch (v) {
+                            'blocks' => 'blocks',
+                            'agents' => 'agents',
+                            _ => 'motion',
+                          }),
+                          child: const BeuiTabsList(
+                            children: [
+                              BeuiTabsTrigger(
+                                value: 'components',
+                                child: Text('Components'),
+                              ),
+                              BeuiTabsTrigger(
+                                value: 'agents',
+                                child: Text('Agents'),
+                              ),
+                              BeuiTabsTrigger(
+                                value: 'blocks',
+                                child: Text('Blocks'),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 20),
+                        for (final theme in BeuiColorTheme.values)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 6),
+                            child: _Swatch(
+                              theme: theme,
+                              selected: colorTheme == theme,
+                              onTap: () => onColorTheme(theme),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
-    return SafeArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-            child: Text(
-              'beUI for Flutter',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w600,
-                color: colors.foreground,
+class _Mark extends StatelessWidget {
+  const _Mark();
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: Image.asset(
+        'assets/beui-mark.png',
+        width: 24,
+        height: 24,
+        filterQuality: FilterQuality.medium,
+        errorBuilder: (context, _, _) {
+          return ColoredBox(
+            color: context.beuiColors.foreground,
+            child: const SizedBox(width: 24, height: 24),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _Swatch extends StatelessWidget {
+  const _Swatch({
+    required this.theme,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final BeuiColorTheme theme;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final sample = BeuiColors.resolve(
+      brightness: Brightness.dark,
+      theme: theme,
+    );
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        width: 14,
+        height: 14,
+        decoration: BoxDecoration(
+          color: sample.primary,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: selected ? context.beuiColors.foreground : sample.borderStrong,
+            width: selected ? 2 : 1,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CatalogBody extends StatelessWidget {
+  const _CatalogBody({
+    required this.category,
+    required this.onSelect,
+  });
+
+  final String category;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.beuiColors;
+    final copy = categoryCopy[category]!;
+    final live = catalogFor(category, liveOnly: true);
+    final label = switch (category) {
+      'blocks' => 'Blocks',
+      'agents' => 'AI Agents',
+      _ => 'Components',
+    };
+
+    final sections = <(String, String, List<CatalogEntry>)>[];
+    if (category == 'agents') {
+      for (final group in agentGroups) {
+        final items = live.where((e) => _inGroup(e, group)).toList();
+        if (items.isEmpty) continue;
+        sections.add((group.title, group.description, items));
+      }
+      final used = sections.expand((s) => s.$3.map((e) => e.key)).toSet();
+      final leftover = live.where((e) => !used.contains(e.key)).toList();
+      if (leftover.isNotEmpty) {
+        sections.add(('Also live', '', leftover));
+      }
+    } else {
+      sections.add(('', '', live));
+    }
+
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 0),
+          sliver: SliverToBoxAdapter(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1120),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: colors.foreground,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    copy.heading,
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w600,
+                      height: 1.15,
+                      letterSpacing: -0.6,
+                      color: colors.foreground,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 640),
+                    child: Text(
+                      copy.description,
+                      style: TextStyle(
+                        fontSize: 15,
+                        height: 1.55,
+                        color: colors.mutedForeground,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              '$done live in this category · ${catalog.where((e) => e.implemented).length} / ${catalog.length} catalog',
-              style: TextStyle(fontSize: 12, color: colors.mutedForeground),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              spacing: 8,
-              children: [
-                for (final c in const ['motion', 'agents', 'blocks'])
-                  _Chip(
-                    label: switch (c) {
-                      'motion' => 'Components',
-                      'agents' => 'AI Agents',
-                      _ => 'Blocks',
-                    },
-                    selected: category == c,
-                    onTap: () => onCategory(c),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 32,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              children: [
-                for (final t in BeuiColorTheme.values)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: _Chip(
-                      label: t.label,
-                      selected: colorTheme == t,
-                      onTap: () => onColorTheme(t),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
-              itemCount: items.length + (rest.isEmpty ? 0 : 1),
-              itemBuilder: (context, i) {
-                if (i == items.length) {
-                  return GestureDetector(
-                    onTap: onToggleRemaining,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                      child: Text(
-                        showRemaining
-                            ? 'Hide remaining (${rest.length})'
-                            : 'Show remaining ${rest.length} not ported yet',
+        ),
+        for (final section in sections) ...[
+          if (section.$1.isNotEmpty)
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(24, 48, 24, 16),
+              sliver: SliverToBoxAdapter(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 640),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        section.$1,
                         style: TextStyle(
-                          fontSize: 13,
-                          color: colors.mutedForeground,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.3,
+                          color: colors.foreground,
                         ),
                       ),
-                    ),
-                  );
-                }
-                final e = items[i];
-                final liveItem = e.implemented;
-                return GestureDetector(
-                  onTap: liveItem ? () => onSelect(e.key) : null,
-                  child: Opacity(
-                    opacity: liveItem ? 1 : 0.45,
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(
-                        vertical: 4,
-                        horizontal: 8,
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                      decoration: BoxDecoration(
-                        color: colors.card,
-                        borderRadius: BorderRadius.circular(BeuiRadii.card),
-                        border: Border.all(color: colors.border),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              spacing: 2,
-                              children: [
-                                Text(
-                                  e.name,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w500,
-                                    color: colors.foreground,
-                                  ),
-                                ),
-                                Text(
-                                  e.key,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: colors.mutedForeground,
-                                  ),
-                                ),
-                              ],
-                            ),
+                      if (section.$2.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          section.$2,
+                          style: TextStyle(
+                            fontSize: 14,
+                            height: 1.55,
+                            color: colors.mutedForeground,
                           ),
-                          if (liveItem)
-                            Text(
-                              'Live',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: colors.success,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            )
+          else
+            const SliverToBoxAdapter(child: SizedBox(height: 32)),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+            sliver: SliverLayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.crossAxisExtent;
+                final columns = width >= 1200
+                    ? 4
+                    : width >= 900
+                        ? 3
+                        : width >= 600
+                            ? 2
+                            : 1;
+                return SliverGrid(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    mainAxisExtent: 304,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, i) {
+                      final entry = section.$3[i];
+                      return CatalogCard(
+                        entry: entry,
+                        onOpen: entry.implemented ? () => onSelect(entry.key) : null,
+                      );
+                    },
+                    childCount: section.$3.length,
                   ),
                 );
               },
             ),
           ),
         ],
-      ),
+        const SliverToBoxAdapter(child: SizedBox(height: 48)),
+      ],
     );
   }
 }
 
+bool _inGroup(CatalogEntry entry, CatalogGroup group) {
+  for (final slug in group.slugs) {
+    if (entry.slug == slug || entry.slug.startsWith('$slug-')) return true;
+  }
+  return false;
+}
+
 class _DemoPage extends StatelessWidget {
-  const _DemoPage({required this.entry, required this.onBack});
+  const _DemoPage({
+    required this.entry,
+    required this.category,
+    required this.onBack,
+  });
 
   final CatalogEntry entry;
+  final String category;
   final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.beuiColors;
     final builder = demoBuilders[entry.key];
-    return SafeArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 20, 8),
-            child: Row(
+    final catLabel = switch (category) {
+      'blocks' => 'Blocks',
+      'agents' => 'AI Agents',
+      _ => 'Components',
+    };
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+          sliver: SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                GestureDetector(
-                  onTap: onBack,
+                Row(
+                  children: [
+                    GestureDetector(
+                      onTap: onBack,
+                      child: Text(
+                        catLabel,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: colors.mutedForeground,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(
+                        '/',
+                        style: TextStyle(color: colors.mutedForeground),
+                      ),
+                    ),
+                    Text(
+                      entry.name,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: colors.foreground,
+                      ),
+                    ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () => launchUrl(Uri.parse(entry.reactUrl)),
+                      child: Text(
+                        'React ↗',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: colors.accent,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  entry.name,
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.6,
+                    color: colors.foreground,
+                  ),
+                ),
+                if (entry.description.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 640),
+                    child: Text(
+                      entry.description,
+                      style: TextStyle(
+                        fontSize: 15,
+                        height: 1.55,
+                        color: colors.mutedForeground,
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 28),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: colors.card,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: colors.border),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(8),
-                    child: Text(
-                      'Back',
-                      style: TextStyle(color: colors.mutedForeground),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: ColoredBox(
+                        color: colors.background,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 48,
+                          ),
+                          child: Center(child: builder?.call() ?? const SizedBox()),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-                Expanded(
-                  child: Text(
-                    entry.name,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: colors.foreground,
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () {
-                    launchUrl(Uri.parse(entry.reactUrl));
-                  },
-                  child: Text(
-                    'React ↗',
-                    style: TextStyle(color: colors.accent),
-                  ),
-                ),
+                const SizedBox(height: 64),
               ],
             ),
           ),
-          Expanded(
-            child: ColoredBox(
-              color: colors.background,
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: builder?.call() ??
-                      Text(
-                        'Not ported yet.\n${entry.key}',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: colors.mutedForeground),
-                      ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.beuiColors;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected ? colors.primary : colors.card,
-          borderRadius: BorderRadius.circular(BeuiRadii.pill),
-          border: Border.all(color: selected ? colors.primary : colors.border),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: selected ? colors.primaryForeground : colors.foreground,
-          ),
-        ),
-      ),
+      ],
     );
   }
 }

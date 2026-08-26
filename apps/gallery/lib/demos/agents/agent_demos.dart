@@ -262,16 +262,22 @@ class _TodoListDemoState extends State<TodoListDemo> {
   ];
   static const ticks = 4;
 
+  bool _running = false;
+
   @override
-  void initState() {
-    super.initState();
-    _tick();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (TickerMode.valuesOf(context).enabled && !_running) {
+      _running = true;
+      _tick();
+    }
   }
 
   void _tick() {
     if (step >= tasks.length * ticks) return;
     Future<void>.delayed(const Duration(milliseconds: 280), () {
       if (!mounted) return;
+      if (!TickerMode.valuesOf(context).enabled) return;
       setState(() => step++);
       _tick();
     });

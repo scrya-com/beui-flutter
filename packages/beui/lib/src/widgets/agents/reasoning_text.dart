@@ -41,7 +41,17 @@ class _BeuiReasoningTextState extends State<BeuiReasoningText> {
   @override
   void initState() {
     super.initState();
-    _arm();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!TickerMode.valuesOf(context).enabled) {
+      _timer?.cancel();
+      _timer = null;
+    } else if (_timer == null) {
+      _arm();
+    }
   }
 
   @override
@@ -56,6 +66,7 @@ class _BeuiReasoningTextState extends State<BeuiReasoningText> {
   void _arm() {
     _timer?.cancel();
     if (widget.phrases.length < 2) return;
+    if (!mounted || !TickerMode.valuesOf(context).enabled) return;
     _timer = Timer.periodic(widget.interval, (_) {
       if (!mounted) return;
       setState(() => _index = (_index + 1) % widget.phrases.length);
