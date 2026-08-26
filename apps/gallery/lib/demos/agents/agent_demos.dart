@@ -81,30 +81,219 @@ class ReasoningTextDemo extends StatelessWidget {
   }
 }
 
-class MessageBubbleDemo extends StatelessWidget {
+class MessageBubbleDemo extends StatefulWidget {
   const MessageBubbleDemo({super.key});
 
   @override
+  State<MessageBubbleDemo> createState() => _MessageBubbleDemoState();
+}
+
+class _MessageBubbleDemoState extends State<MessageBubbleDemo>
+    with TickerProviderStateMixin {
+  static const _reply =
+      'That message mounted once with a spring pop. Streaming updates only change its content, so the entrance does not replay.';
+
+  final _messages = <_ThreadMessage>[
+    _ThreadMessage(
+      id: 'welcome-question',
+      from: BeuiMessageFrom.user,
+      content: 'What should we include in the first release?',
+    ),
+    _ThreadMessage(
+      id: 'welcome-answer',
+      from: BeuiMessageFrom.assistant,
+      content: 'Start with the smallest workflow that still feels complete.',
+    ),
+  ];
+
+  late final AnimationController _pending;
+  late final AnimationController _stream;
+  var _waiting = false;
+  String? _streamId;
+  var _streamFull = '';
+  var _run = 0;
+
+  bool get _loading => _waiting || _streamId != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _pending = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 420),
+    )..addStatusListener((s) {
+        if (s == AnimationStatus.completed) _beginStream();
+      });
+    _stream = AnimationController(vsync: this, duration: const Duration(seconds: 1))
+      ..addListener(_onStreamTick)
+      ..addStatusListener((s) {
+        if (s == AnimationStatus.completed) _finishStream();
+      });
+  }
+
+  @override
+  void dispose() {
+    _pending.dispose();
+    _stream.dispose();
+    super.dispose();
+  }
+
+  void _submit(String prompt, String? _) {
+    if (_loading || prompt.trim().isEmpty) return;
+    final run = _run++;
+    setState(() {
+      _messages.add(
+        _ThreadMessage(
+          id: 'sent-user-$run',
+          from: BeuiMessageFrom.user,
+          content: prompt,
+          animateIn: true,
+        ),
+      );
+      _waiting = true;
+    });
+    if (beuiReduceMotion(context)) {
+      _beginStream();
+    } else {
+      _pending.forward(from: 0);
+    }
+  }
+
+  void _beginStream() {
+    if (!mounted) return;
+    final id = 'sent-assistant-$_run';
+    setState(() {
+      _waiting = false;
+      _streamId = id;
+      _streamFull = _reply;
+      _messages.add(
+        _ThreadMessage(
+          id: id,
+          from: BeuiMessageFrom.assistant,
+          content: '',
+          streaming: true,
+          animateIn: true,
+        ),
+      );
+    });
+    if (beuiReduceMotion(context)) {
+      _finishStream();
+      return;
+    }
+    final ms = 140 + (_reply.length / 96 * 1000).round();
+    _stream.duration = Duration(milliseconds: ms);
+    _stream.forward(from: 0);
+  }
+
+  void _onStreamTick() {
+    if (_streamId == null) return;
+    final duration = _stream.duration ?? Duration.zero;
+    final elapsed = duration.inMilliseconds * _stream.value;
+    final cursor =
+        ((elapsed - 140) / 1000 * 96).floor().clamp(0, _streamFull.length);
+    final next = _streamFull.substring(0, cursor);
+    for (final m in _messages) {
+      if (m.id == _streamId && m.content != next) {
+        setState(() => m.content = next);
+        return;
+      }
+    }
+  }
+
+  void _finishStream() {
+    if (!mounted || _streamId == null) return;
+    setState(() {
+      for (final m in _messages) {
+        if (m.id == _streamId) {
+          m
+            ..content = _streamFull
+            ..streaming = false;
+        }
+      }
+      _streamId = null;
+    });
+  }
+
+  void _stop() {
+    _pending.stop();
+    _stream.stop();
+    setState(() {
+      _waiting = false;
+      for (final m in _messages) {
+        if (m.streaming) m.streaming = false;
+      }
+      _streamId = null;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const SizedBox(
-      width: 420,
-      child: BeuiMessageBubbleGroup(
-        children: [
-          BeuiMessageBubble(
-            align: BeuiMessageAlign.end,
-            variant: BeuiMessageBubbleVariant.solid,
-            animateIn: true,
-            child: Text('Can you summarize the release notes?'),
-          ),
-          BeuiMessageBubble(
-            align: BeuiMessageAlign.start,
-            variant: BeuiMessageBubbleVariant.soft,
-            animateIn: true,
-            child: Text(
-              'The release improves streaming, navigation, and recovery states.',
+    final colors = context.beuiColors;
+    return SizedBox(
+      width: 440,
+      height: 440,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.background,
+          borderRadius: BorderRadius.circular(BeuiRadii.card),
+          border: Border.all(color: colors.border.withValues(alpha: 0.7)),
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: BeuiMessageScroller(
+                height: null,
+                busy: _loading,
+                children: [
+                  for (final message in _messages)
+                    BeuiScrollerMessage(
+                      id: message.id,
+                      from: message.from,
+                      text: message.content,
+                      child: BeuiMessageBubble(
+                        align: message.from == BeuiMessageFrom.user
+                            ? BeuiMessageAlign.end
+                            : BeuiMessageAlign.start,
+                        variant: message.from == BeuiMessageFrom.user
+                            ? BeuiMessageBubbleVariant.solid
+                            : BeuiMessageBubbleVariant.soft,
+                        animateIn: message.animateIn &&
+                            message.from == BeuiMessageFrom.user,
+                        child: Text(
+                          message.content.isEmpty ? '…' : message.content,
+                        ),
+                      ),
+                    ),
+                  if (_waiting)
+                    const BeuiScrollerMessage(
+                      id: 'pending-assistant',
+                      from: BeuiMessageFrom.assistant,
+                      text: 'Preparing response',
+                      child: BeuiMessageBubble(
+                        child: Text('Preparing response'),
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-        ],
+            DecoratedBox(
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: colors.border.withValues(alpha: 0.6)),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: BeuiPromptInput(
+                  placeholder: 'Send a bubble…',
+                  loading: _loading,
+                  onSubmit: _submit,
+                  onStop: _stop,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -680,7 +869,7 @@ class _MessageScrollerDemoState extends State<MessageScrollerDemo>
   }
 }
 
-class CitationsDemo extends StatelessWidget {
+class CitationsDemo extends StatefulWidget {
   const CitationsDemo({super.key});
 
   static const items = [
@@ -705,18 +894,82 @@ class CitationsDemo extends StatelessWidget {
   ];
 
   @override
+  State<CitationsDemo> createState() => _CitationsDemoState();
+}
+
+class _CitationsDemoState extends State<CitationsDemo>
+    with SingleTickerProviderStateMixin {
+  // Preview clock: 500ms then +700ms per row (`citations.preview.tsx`).
+  static const _firstDelay = Duration(milliseconds: 500);
+  static const _stagger = Duration(milliseconds: 700);
+
+  late final AnimationController _clock;
+  int _visible = 0;
+
+  Duration get _span =>
+      _firstDelay + _stagger * (CitationsDemo.items.length - 1);
+
+  int _countFor(double t) {
+    final ms = t * _span.inMilliseconds;
+    var n = 0;
+    for (var i = 0; i < CitationsDemo.items.length; i++) {
+      if (ms >= _firstDelay.inMilliseconds + i * _stagger.inMilliseconds) {
+        n = i + 1;
+      }
+    }
+    return n;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _clock = AnimationController(vsync: this, duration: _span)
+      ..addListener(() {
+        final next = _countFor(_clock.value);
+        if (next != _visible) setState(() => _visible = next);
+      });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (beuiReduceMotion(context)) {
+      _visible = CitationsDemo.items.length;
+      return;
+    }
+    if (TickerMode.valuesOf(context).enabled &&
+        _visible < CitationsDemo.items.length &&
+        !_clock.isAnimating) {
+      _clock.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _clock.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = context.beuiColors;
     return SizedBox(
       width: 420,
+      height: 410,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text.rich(
             TextSpan(
-              style: TextStyle(fontSize: 14, height: 1.55, color: colors.foreground),
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.55,
+                color: colors.foreground,
+              ),
               children: const [
-                TextSpan(text: 'Use layout-aware motion for newly appended results '),
+                TextSpan(
+                  text: 'Use layout-aware motion for newly appended results ',
+                ),
                 WidgetSpan(child: BeuiCitation(index: 1)),
                 TextSpan(text: ' and preserve accessible disclosure '),
                 WidgetSpan(child: BeuiCitation(index: 2)),
@@ -724,8 +977,11 @@ class CitationsDemo extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          const BeuiCitations(citations: items, initialOpen: true),
+          const SizedBox(height: 16),
+          BeuiCitations(
+            citations: CitationsDemo.items.take(_visible).toList(),
+            initialOpen: true,
+          ),
         ],
       ),
     );
@@ -751,18 +1007,20 @@ class _StreamingResponseDemoState extends State<StreamingResponseDemo>
     super.initState();
     _clock = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 18),
-    )..addStatusListener((status) {
-        if (status != AnimationStatus.completed || !mounted) return;
-        if (_chars >= text.length) return;
-        setState(() => _chars++);
-        if (_chars < text.length) _clock.forward(from: 0);
+      duration: Duration(milliseconds: (text.length / 110 * 1000).round()),
+    )..addListener(() {
+        final next = (_clock.value * text.length).floor().clamp(0, text.length);
+        if (next != _chars) setState(() => _chars = next);
       });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (beuiReduceMotion(context)) {
+      _chars = text.length;
+      return;
+    }
     if (TickerMode.valuesOf(context).enabled &&
         _chars < text.length &&
         !_clock.isAnimating) {
@@ -826,12 +1084,17 @@ class _ToolResultDemoState extends State<ToolResultDemo>
     super.initState();
     _clock = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 220),
-    )..addStatusListener((status) {
-        if (status != AnimationStatus.completed || !mounted) return;
-        if (visible >= lines.length) return;
-        setState(() => visible++);
-        if (visible < lines.length) _clock.forward(from: 0);
+      duration: Duration(
+        milliseconds: lines.length * 420 + 480,
+      ),
+    )..addListener(() {
+        final ms = _clock.value * (lines.length * 420 + 480);
+        // useToolResultDemo: index * interval + 180, interval 420.
+        var next = 0;
+        for (var i = 0; i < lines.length; i++) {
+          if (ms >= i * 420 + 180) next = i + 1;
+        }
+        if (next != visible) setState(() => visible = next);
       });
   }
 
@@ -1026,13 +1289,14 @@ class _AgentActivityDemoState extends State<AgentActivityDemo>
     super.initState();
     _clock = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1050),
+      duration: const Duration(milliseconds: 850),
     )..addStatusListener((status) {
         if (status != AnimationStatus.completed || !mounted) return;
         if (frame >= frames.length - 1) return;
         setState(() => frame++);
         if (frame < frames.length - 1) {
-          _clock.duration = Duration(milliseconds: frame == 0 ? 850 : 1050);
+          // 850 + index * 1050 → after the first frame, every step is 1050ms.
+          _clock.duration = const Duration(milliseconds: 1050);
           _clock.forward(from: 0);
         } else {
           _done.forward();
@@ -1480,24 +1744,28 @@ class _ToolApprovalDemoState extends State<ToolApprovalDemo>
             left: 0,
             bottom: 0,
             child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: _replay,
-              child: Row(
-                spacing: 6,
-                children: [
-                  BeuiIcon(
-                    BeuiIcons.rotateCcw,
-                    size: 12,
-                    color: colors.mutedForeground,
-                  ),
-                  Text(
-                    'Replay',
-                    style: TextStyle(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(0, 8, 12, 4),
+                child: Row(
+                  spacing: 6,
+                  children: [
+                    BeuiIcon(
+                      BeuiIcons.rotateCcw,
+                      size: 12,
                       color: colors.mutedForeground,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
                     ),
-                  ),
-                ],
+                    Text(
+                      'Replay',
+                      style: TextStyle(
+                        color: colors.mutedForeground,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

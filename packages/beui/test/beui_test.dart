@@ -651,33 +651,36 @@ void main() {
   });
 
   group('BeuiToolApproval', () {
+    Widget wrapCard(Widget child, {double width = 420}) {
+      return BeuiTheme.wrap(
+        child: Directionality(
+          textDirection: TextDirection.ltr,
+          child: Center(
+            child: SizedBox(width: width, child: child),
+          ),
+        ),
+      );
+    }
+
     testWidgets('pending shows allow/deny; complete hides actions',
         (tester) async {
       var approved = false;
       await tester.pumpWidget(
-        BeuiTheme.wrap(
-          child: Directionality(
-            textDirection: TextDirection.ltr,
-            child: Center(
-              child: SizedBox(
-                width: 420,
-                child: BeuiToolApproval(
-                  tool: 'terminal.run',
-                  title: 'Allow this tool to run?',
-                  status: BeuiToolApprovalStatus.pending,
-                  initialOpen: true,
-                  parameters: const [
-                    BeuiToolApprovalParameter(
-                      id: 'command',
-                      label: 'Command',
-                      value: Text('bun test'),
-                    ),
-                  ],
-                  onApprove: () => approved = true,
-                  onDeny: () {},
-                ),
+        wrapCard(
+          BeuiToolApproval(
+            tool: 'terminal.run',
+            title: 'Allow this tool to run?',
+            status: BeuiToolApprovalStatus.pending,
+            initialOpen: true,
+            parameters: const [
+              BeuiToolApprovalParameter(
+                id: 'command',
+                label: 'Command',
+                value: Text('bun test'),
               ),
-            ),
+            ],
+            onApprove: () => approved = true,
+            onDeny: () {},
           ),
         ),
       );
@@ -689,24 +692,224 @@ void main() {
       expect(approved, isTrue);
 
       await tester.pumpWidget(
+        wrapCard(
+          const BeuiToolApproval(
+            tool: 'terminal.run',
+            title: 'Terminal access',
+            status: BeuiToolApprovalStatus.complete,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Completed'), findsOneWidget);
+      expect(find.text('Allow once'), findsNothing);
+    });
+
+    testWidgets('default title stays put when not pending', (tester) async {
+      await tester.pumpWidget(
+        wrapCard(
+          const BeuiToolApproval(
+            tool: 'terminal.run',
+            status: BeuiToolApprovalStatus.complete,
+          ),
+        ),
+      );
+      expect(find.text('Allow this tool to run?'), findsOneWidget);
+      expect(find.text('Terminal access'), findsNothing);
+    });
+
+    testWidgets('deny is hittable and code wraps in a narrow card',
+        (tester) async {
+      var denied = false;
+      await tester.pumpWidget(
+        wrapCard(
+          BeuiToolApproval(
+            tool: 'terminal.run',
+            status: BeuiToolApprovalStatus.pending,
+            initialOpen: true,
+            parameters: const [
+              BeuiToolApprovalParameter(
+                id: 'command',
+                label: 'Command',
+                value: BeuiToolApprovalCode(
+                  code: 'bun test tests/a11y.test.tsx',
+                ),
+              ),
+            ],
+            onDeny: () => denied = true,
+          ),
+          width: 280,
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('Deny'));
+      await tester.pump();
+      expect(denied, isTrue);
+    });
+
+    testWidgets('horizontal swipe past threshold denies', (tester) async {
+      var denied = false;
+      await tester.pumpWidget(
+        wrapCard(
+          BeuiToolApproval(
+            tool: 'terminal.run',
+            status: BeuiToolApprovalStatus.pending,
+            onDeny: () => denied = true,
+          ),
+        ),
+      );
+      await tester.drag(
+        find.byType(BeuiToolApproval),
+        const Offset(-140, 0),
+      );
+      await tester.pumpAndSettle();
+      expect(denied, isTrue);
+    });
+  });
+
+  group('BeuiSelect', () {
+    testWidgets('opens on tap and selects an item', (tester) async {
+      String? value = 'next';
+      await tester.pumpWidget(
         BeuiTheme.wrap(
-          child: const Directionality(
+          child: MediaQuery(
+            data: const MediaQueryData(size: Size(800, 600)),
+            child: Directionality(
+              textDirection: TextDirection.ltr,
+              child: Overlay(
+                initialEntries: [
+                  OverlayEntry(
+                    builder: (context) => Center(
+                      child: SizedBox(
+                        width: 280,
+                        child: BeuiSelect(
+                          value: value,
+                          onChanged: (v) => value = v,
+                          child: const Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              BeuiSelectTrigger(
+                                child: BeuiSelectValue(placeholder: 'Pick'),
+                              ),
+                              BeuiSelectContent(
+                                children: [
+                                  BeuiSelectItem(
+                                    value: 'next',
+                                    child: Text('Next.js'),
+                                  ),
+                                  BeuiSelectItem(
+                                    value: 'remix',
+                                    child: Text('Remix'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Remix').hitTestable(), findsNothing);
+      await tester.tap(find.byType(BeuiSelectTrigger));
+      await tester.pumpAndSettle();
+      expect(find.text('Remix').hitTestable(), findsOneWidget);
+      await tester.tap(find.text('Remix').hitTestable());
+      await tester.pumpAndSettle();
+      expect(value, 'remix');
+    });
+  });
+
+  group('BeuiAISidebar', () {
+    test('moveResource inserts before a sibling', () {
+      const items = [
+        BeuiSidebarResource(
+          id: 'a',
+          label: 'A',
+          kind: BeuiSidebarResourceKind.file,
+        ),
+        BeuiSidebarResource(
+          id: 'b',
+          label: 'B',
+          kind: BeuiSidebarResourceKind.file,
+        ),
+      ];
+      final next = beuiMoveResource(
+        items,
+        const BeuiSidebarResourceMove(
+          itemId: 'b',
+          targetId: 'a',
+          position: BeuiSidebarDropPosition.before,
+        ),
+      );
+      expect(next!.map((e) => e.id).toList(), ['b', 'a']);
+    });
+
+    testWidgets('shows rows and selects a file', (tester) async {
+      await tester.pumpWidget(
+        BeuiTheme.wrap(
+          child: Directionality(
             textDirection: TextDirection.ltr,
-            child: Center(
-              child: SizedBox(
-                width: 420,
-                child: BeuiToolApproval(
-                  tool: 'terminal.run',
-                  title: 'Terminal access',
-                  status: BeuiToolApprovalStatus.complete,
+            child: WidgetsApp(
+              color: const Color(0xFF151515),
+              builder: (context, _) => Center(
+                child: SizedBox(
+                  width: 280,
+                  height: 400,
+                  child: BeuiAISidebar(
+                  initialItems: const [
+                    BeuiSidebarResource(
+                      id: 'platform',
+                      label: 'Platform',
+                      kind: BeuiSidebarResourceKind.project,
+                      children: [
+                        BeuiSidebarResource(
+                          id: 'api',
+                          label: 'API migration',
+                          kind: BeuiSidebarResourceKind.file,
+                        ),
+                      ],
+                    ),
+                  ],
+                  initialExpandedIds: const ['platform'],
+                ),
                 ),
               ),
             ),
           ),
         ),
       );
-      expect(find.text('Completed'), findsOneWidget);
-      expect(find.text('Allow once'), findsNothing);
+      expect(find.text('Platform'), findsOneWidget);
+      expect(find.text('API migration'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('BeuiChatApp', () {
+    testWidgets('renders sidebar and conversation', (tester) async {
+      await tester.pumpWidget(
+        BeuiTheme.wrap(
+          child: const Directionality(
+            textDirection: TextDirection.ltr,
+            child: SizedBox(
+              width: 800,
+              height: 480,
+              child: BeuiChatApp(
+                sidebar: Text('nav'),
+                child: Text('thread'),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('nav'), findsOneWidget);
+      expect(find.text('thread'), findsOneWidget);
     });
   });
 }

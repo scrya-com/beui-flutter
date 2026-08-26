@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
 
-import '../../motion/pop_in.dart';
 import '../../motion/reduce.dart';
 import '../../motion/spring_motion.dart';
 import '../../tokens/ease.dart';
@@ -42,7 +41,7 @@ class BeuiMessageBubble extends StatelessWidget {
   }
 }
 
-class BeuiMessageBubbleContent extends StatelessWidget {
+class BeuiMessageBubbleContent extends StatefulWidget {
   const BeuiMessageBubbleContent({
     super.key,
     required this.child,
@@ -57,9 +56,78 @@ class BeuiMessageBubbleContent extends StatelessWidget {
   final bool animateIn;
 
   @override
+  State<BeuiMessageBubbleContent> createState() =>
+      _BeuiMessageBubbleContentState();
+}
+
+class _BeuiMessageBubbleContentState extends State<BeuiMessageBubbleContent>
+    with TickerProviderStateMixin {
+  static const _pop = BeuiSpringSpec(stiffness: 520, damping: 27, mass: 0.52);
+
+  late final BeuiSpringValue _scale;
+  late final AnimationController _surfaceFade;
+  late final AnimationController _contentFade;
+
+  @override
+  void initState() {
+    super.initState();
+    final play = widget.animateIn;
+    _scale = BeuiSpringValue(value: play ? 0 : 1, spec: _pop)..attach(this);
+    _scale.addListener(_tick);
+    _surfaceFade = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 120),
+      value: play ? 0 : 1,
+    )..addListener(_tick);
+    // BUBBLE_CONTENT_REVEAL: delay 40ms + duration 120ms.
+    _contentFade = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 160),
+      value: play ? 0 : 1,
+    )..addListener(_tick);
+  }
+
+  void _tick() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduce = beuiReduceMotion(context);
+    _scale.reducedMotion = reduce;
+    if (!widget.animateIn) return;
+    if (reduce) {
+      _scale.jump(1);
+      _surfaceFade.value = 1;
+      _contentFade.value = 1;
+      return;
+    }
+    if (TickerMode.valuesOf(context).enabled &&
+        _scale.value == 0 &&
+        !_scale.isAnimating) {
+      _scale.animateTo(1);
+      _surfaceFade.forward();
+      _contentFade.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _scale
+      ..removeListener(_tick)
+      ..dispose();
+    _surfaceFade.dispose();
+    _contentFade.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = context.beuiColors;
     final reduce = beuiReduceMotion(context);
+    final variant = widget.variant;
+    final align = widget.align;
     final (Color? bg, Color fg, BoxBorder? border) = switch (variant) {
       BeuiMessageBubbleVariant.solid => (
           colors.foreground,
@@ -85,45 +153,57 @@ class BeuiMessageBubbleContent extends StatelessWidget {
         ),
     };
 
-    final bubble = ConstrainedBox(
-      constraints: BoxConstraints(
-        maxWidth: variant == BeuiMessageBubbleVariant.ghost
-            ? double.infinity
-            : MediaQuery.sizeOf(context).width * 0.82,
-        minWidth: variant == BeuiMessageBubbleVariant.ghost ? 0 : 36,
-      ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: bg,
-          border: border,
-          borderRadius: variant == BeuiMessageBubbleVariant.ghost
-              ? BorderRadius.zero
-              : BorderRadius.circular(16),
-        ),
-        child: Padding(
-          padding: variant == BeuiMessageBubbleVariant.ghost
-              ? EdgeInsets.zero
-              : const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: DefaultTextStyle(
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.5,
-              color: fg,
+    final scale = reduce ? 1.0 : 0.92 + 0.08 * _scale.value;
+    final surfaceOpacity = reduce
+        ? 1.0
+        : BeuiCurves.easeOut.transform(_surfaceFade.value.clamp(0.0, 1.0));
+    final contentT = reduce
+        ? 1.0
+        : BeuiCurves.easeOut.transform(
+            ((_contentFade.value * 160 - 40) / 120).clamp(0.0, 1.0),
+          );
+
+    return Opacity(
+      opacity: surfaceOpacity,
+      child: Transform.scale(
+        alignment: align == BeuiMessageAlign.end
+            ? Alignment.bottomRight
+            : Alignment.bottomLeft,
+        scale: scale,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: variant == BeuiMessageBubbleVariant.ghost
+                ? double.infinity
+                : MediaQuery.sizeOf(context).width * 0.82,
+            minWidth: variant == BeuiMessageBubbleVariant.ghost ? 0 : 36,
+          ),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: bg,
+              border: border,
+              borderRadius: variant == BeuiMessageBubbleVariant.ghost
+                  ? BorderRadius.zero
+                  : BorderRadius.circular(16),
             ),
-            child: child,
+            child: Padding(
+              padding: variant == BeuiMessageBubbleVariant.ghost
+                  ? EdgeInsets.zero
+                  : const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Opacity(
+                opacity: contentT,
+                child: DefaultTextStyle(
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.5,
+                    color: fg,
+                  ),
+                  child: widget.child,
+                ),
+              ),
+            ),
           ),
         ),
       ),
-    );
-
-    return BeuiPopIn(
-      enabled: animateIn && !reduce,
-      spec: const BeuiSpringSpec(stiffness: 520, damping: 27, mass: 0.52),
-      alignment: align == BeuiMessageAlign.end
-          ? Alignment.bottomRight
-          : Alignment.bottomLeft,
-      fromScale: 0.92,
-      child: bubble,
     );
   }
 }

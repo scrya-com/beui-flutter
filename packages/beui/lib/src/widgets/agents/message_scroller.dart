@@ -310,7 +310,7 @@ class _BeuiMessageScrollerState extends State<BeuiMessageScroller> {
       }
       return child;
     }).toList();
-    return BeuiMessageBubbleGroup(children: rows);
+    return BeuiMessageBubbleGroup(spacing: 16, children: rows);
   }
 
   @override
@@ -347,13 +347,13 @@ class _BeuiMessageScrollerState extends State<BeuiMessageScroller> {
               child: SingleChildScrollView(
                 controller: _controller,
                 padding: EdgeInsets.fromLTRB(
+                  12,
                   16,
-                  20,
                   widget.navigation == BeuiMessageScrollerNavigation.rail &&
                           _railOverflowing
                       ? 40
-                      : 16,
-                  20,
+                      : 12,
+                  16,
                 ),
                 child: SizeChangedLayoutNotifier(
                   key: _contentKey,

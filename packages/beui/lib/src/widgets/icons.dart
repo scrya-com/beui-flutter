@@ -664,6 +664,84 @@ class BeuiIcons {
     );
   }
 
+  static void folder(Canvas c, Size s, Paint p) {
+    c.drawPath(
+      Path()
+        ..moveTo(3, 7)
+        ..lineTo(3, 19)
+        ..lineTo(21, 19)
+        ..lineTo(21, 9)
+        ..lineTo(12, 9)
+        ..lineTo(10, 6)
+        ..lineTo(3, 6)
+        ..close(),
+      p,
+    );
+  }
+
+  static void folderOpen(Canvas c, Size s, Paint p) {
+    c.drawPath(
+      Path()
+        ..moveTo(6, 10)
+        ..lineTo(3, 18)
+        ..lineTo(21, 18)
+        ..lineTo(18, 10)
+        ..close(),
+      p,
+    );
+    c.drawPath(
+      Path()
+        ..moveTo(4, 7)
+        ..lineTo(4, 10)
+        ..moveTo(4, 7)
+        ..lineTo(10, 7)
+        ..lineTo(12, 9)
+        ..lineTo(20, 9),
+      p,
+    );
+  }
+
+  static void bookmark(Canvas c, Size s, Paint p) {
+    c.drawPath(
+      Path()
+        ..moveTo(7, 4)
+        ..lineTo(17, 4)
+        ..lineTo(17, 20)
+        ..lineTo(12, 16)
+        ..lineTo(7, 20)
+        ..close(),
+      p,
+    );
+  }
+
+  static void moreHorizontal(Canvas c, Size s, Paint p) {
+    c.drawCircle(const Offset(6, 12), 1.2, p);
+    c.drawCircle(const Offset(12, 12), 1.2, p);
+    c.drawCircle(const Offset(18, 12), 1.2, p);
+  }
+
+  static void arrowUp(Canvas c, Size s, Paint p) {
+    c.drawLine(const Offset(12, 19), const Offset(12, 5), p);
+    c.drawPath(
+      Path()
+        ..moveTo(5, 12)
+        ..lineTo(12, 5)
+        ..lineTo(19, 12),
+      p,
+    );
+  }
+
+  static void arrowDown(Canvas c, Size s, Paint p) {
+    c.drawLine(const Offset(12, 5), const Offset(12, 19), p);
+    c.drawPath(
+      Path()
+        ..moveTo(5, 12)
+        ..lineTo(12, 19)
+        ..lineTo(19, 12),
+      p,
+    );
+  }
+
   static void shieldCheck(Canvas c, Size s, Paint p) {
     c.drawPath(
       Path()

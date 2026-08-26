@@ -423,7 +423,7 @@ bool _inGroup(CatalogEntry entry, CatalogGroup group) {
   return false;
 }
 
-class _DemoPage extends StatelessWidget {
+class _DemoPage extends StatefulWidget {
   const _DemoPage({
     required this.entry,
     required this.category,
@@ -435,7 +435,16 @@ class _DemoPage extends StatelessWidget {
   final VoidCallback onBack;
 
   @override
+  State<_DemoPage> createState() => _DemoPageState();
+}
+
+class _DemoPageState extends State<_DemoPage> {
+  int _run = 0;
+
+  @override
   Widget build(BuildContext context) {
+    final entry = widget.entry;
+    final category = widget.category;
     final colors = context.beuiColors;
     final builder = demoBuilders[entry.key];
     final catLabel = switch (category) {
@@ -454,7 +463,7 @@ class _DemoPage extends StatelessWidget {
                 Row(
                   children: [
                     GestureDetector(
-                      onTap: onBack,
+                      onTap: widget.onBack,
                       child: Text(
                         catLabel,
                         style: TextStyle(
@@ -528,12 +537,51 @@ class _DemoPage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                       child: ColoredBox(
                         color: colors.background,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 48,
-                          ),
-                          child: Center(child: builder?.call() ?? const SizedBox()),
+                        child: Stack(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 48,
+                              ),
+                              child: Center(
+                                child: KeyedSubtree(
+                                  key: ValueKey(_run),
+                                  child: builder?.call() ?? const SizedBox(),
+                                ),
+                              ),
+                            ),
+                            if (category == 'agents')
+                              Positioned(
+                                left: 12,
+                                bottom: 12,
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () => setState(() => _run++),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8),
+                                    child: Row(
+                                      spacing: 6,
+                                      children: [
+                                        BeuiIcon(
+                                          BeuiIcons.rotateCcw,
+                                          size: 12,
+                                          color: colors.mutedForeground,
+                                        ),
+                                        Text(
+                                          'Replay',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: colors.mutedForeground,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ),

@@ -47,6 +47,7 @@ Already-hit constraints — treat a recurrence as a bug, not a given:
 | `State no longer has a context` after hover | `beuiAfterPointer` can run after dispose. Return if `!mounted` before reading `context`. |
 | `RenderFlex overflowed` on a catalog card | `Transform.scale` does not shrink layout. Wrap the scaled stage in `OverflowBox` + `ClipRect` (`CatalogPreviewFit`). |
 | Chrome long tasks while scrolling the catalog | Off-screen cards must not keep tickers. `addAutomaticKeepAlives: false` + `VisibleTicker`. |
+| Motion feels faster, slower, or denser than beui.dev | The clock drifted. Copy duration, delay, stagger, ease, offset, and spring k/c/m from the React component **and** its preview. Do not substitute `BeuiPopIn` for a `y` slide. |
 
 If DevTools, `flutter test`, or `flutter analyze` disagrees with the intended UI, the test or the widget is wrong — fix that widget before adding the next slug.
 
@@ -69,6 +70,31 @@ Do not guess from a screenshot. The console names the widget; the stack names th
 - Gate decorative hover (magnetic, tilt, 1.02 scale) with `beuiHoverCapable`.
 - Animate transform and opacity only. Blur ≤ 10px. Exits faster than entrances.
 - Agent surfaces must move: shimmer, progress grid, reasoning cycle, bubble pop, disclosure clip/size, status morphs, send/stop swap.
+
+## React timing is the contract
+
+Copy timing from the React **component and its preview**. Do not invent a Flutter cadence, round milliseconds, or “feel it in.”
+
+Read both files before writing motion:
+
+| Clock | React source |
+|---|---|
+| Spring k / c / m, duration, ease, blur, y/x offset | `components/{motion,agents,blocks}/…` |
+| Stagger, stream interval, first delay, replay | `components/previews/…` matching `previewKey` |
+
+Port literally:
+
+- `duration: 0.18` → `Duration(milliseconds: 180)` (seconds × 1000, no rounding)
+- `delay: 0.5` / `setTimeout(..., 500 + index * 700)` → the same numbers on an `AnimationController`
+- `stagger: 0.09` → 90ms between units
+- `transition: SPRING_LAYOUT` (or a local `{ stiffness, damping, mass }`) → that exact `BeuiSpringSpec`
+- `ease: EASE_OUT` / `EASE_IN_OUT` / `EASE_DRAWER` → `BeuiCurves.*`
+- Enter offset `y: 6` stays **6 logical pixels**, not a scale pop, unless the React file scales
+- Exit duration stays shorter only when the React file already does
+
+Gallery demos must use the preview’s clock, not “show the final state.” If the React preview streams items, the Flutter demo streams at the same offsets. Convert `setTimeout` / `setInterval` to `AnimationController` so tests can dispose them; the **deadlines stay the React numbers**.
+
+A port that uses the right springs but the wrong stagger is wrong. Fix the clock before adding the next slug.
 
 ## Theme
 
