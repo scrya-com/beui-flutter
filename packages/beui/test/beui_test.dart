@@ -984,6 +984,28 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
       expect(find.text('Sticky'), findsNothing);
     });
+
+    testWidgets('fixed placement portals a toast onto Overlay', (tester) async {
+      await tester.pumpWidget(
+        BeuiTheme.wrap(
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Overlay(
+              initialEntries: [
+                OverlayEntry(
+                  builder: (context) => const _ToastHarness(
+                    placement: BeuiToastPlacement.fixed,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Show'));
+      await tester.pump();
+      expect(find.text('Hello'), findsOneWidget);
+    });
   });
 
   group('BeuiWheelPicker', () {
@@ -1067,7 +1089,9 @@ void main() {
 }
 
 class _ToastHarness extends StatefulWidget {
-  const _ToastHarness();
+  const _ToastHarness({this.placement = BeuiToastPlacement.stat});
+
+  final BeuiToastPlacement placement;
 
   @override
   State<_ToastHarness> createState() => _ToastHarnessState();
@@ -1122,7 +1146,7 @@ class _ToastHarnessState extends State<_ToastHarness>
         BeuiAnimatedToastStack(
           toasts: _toasts.toasts,
           onDismiss: _toasts.dismissToast,
-          placement: BeuiToastPlacement.stat,
+          placement: widget.placement,
         ),
       ],
     );

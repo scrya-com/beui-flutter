@@ -286,8 +286,7 @@ class _PresentToast {
 
 class _BeuiAnimatedToastStackState extends State<BeuiAnimatedToastStack> {
   final List<_PresentToast> _present = [];
-  OverlayEntry? _entry;
-  OverlayState? _overlay;
+  final OverlayPortalController _portal = OverlayPortalController();
 
   BeuiToastPlacement get _placement =>
       widget.placement ??
@@ -300,21 +299,16 @@ class _BeuiAnimatedToastStackState extends State<BeuiAnimatedToastStack> {
   void initState() {
     super.initState();
     _syncPresent();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _overlay = Overlay.maybeOf(context, rootOverlay: true) ?? Overlay.maybeOf(context);
-    _syncOverlay();
+    // Safe before OverlayPortal attaches. Overlay.insert during Overlay.build
+    // throws, which hid gallery toasts with `placement: fixed`.
+    if (_shouldPortal) _portal.show();
   }
 
   @override
   void didUpdateWidget(BeuiAnimatedToastStack oldWidget) {
     super.didUpdateWidget(oldWidget);
     _syncPresent();
-    _syncOverlay();
-    _entry?.markNeedsBuild();
+    _syncPortal();
   }
 
   void _syncPresent() {
@@ -341,34 +335,17 @@ class _BeuiAnimatedToastStackState extends State<BeuiAnimatedToastStack> {
   void _finishExit(String id) {
     _present.removeWhere((e) => e.toast.id == id && e.exiting);
     if (mounted) setState(() {});
-    _entry?.markNeedsBuild();
   }
 
-  void _syncOverlay() {
-    final overlay = _overlay;
-    if (_shouldPortal && overlay != null) {
-      if (_entry == null) {
-        _entry = OverlayEntry(builder: _buildOverlay);
-        overlay.insert(_entry!);
-      }
-    } else {
-      _dropOverlay();
-    }
-  }
-
-  void _dropOverlay() {
-    _entry?.remove();
-    _entry = null;
-  }
-
-  @override
-  void dispose() {
-    _dropOverlay();
-    super.dispose();
-  }
-
-  Widget _buildOverlay(BuildContext overlayContext) {
-    return _positioned(overlayContext, _stack());
+  /// [OverlayPortalController.show]/[hide] must not run during build.
+  void _syncPortal() {
+    final want = _shouldPortal;
+    if (want == _portal.isShowing) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_shouldPortal && !_portal.isShowing) _portal.show();
+      if (!_shouldPortal && _portal.isShowing) _portal.hide();
+    });
   }
 
   Widget _positioned(BuildContext context, Widget child) {
@@ -378,23 +355,27 @@ class _BeuiAnimatedToastStackState extends State<BeuiAnimatedToastStack> {
         pos == BeuiToastPosition.topRight;
     final isLeft = pos == BeuiToastPosition.topLeft ||
         pos == BeuiToastPosition.bottomLeft;
-    final isRight = pos == BeuiToastPosition.topRight ||
-        pos == BeuiToastPosition.bottomRight;
     final isCenter = pos == BeuiToastPosition.topCenter ||
         pos == BeuiToastPosition.bottomCenter;
     final mq = MediaQuery.maybeOf(context);
     final pad = mq?.padding ?? EdgeInsets.zero;
-    return Positioned(
-      top: isTop ? pad.top + 16 : null,
-      bottom: isTop ? null : pad.bottom + 24,
-      left: isRight && !isCenter ? null : 16,
-      right: isLeft && !isCenter ? null : 16,
-      child: Align(
-        alignment: isCenter
-            ? Alignment.center
-            : isLeft
-                ? Alignment.centerLeft
-                : Alignment.centerRight,
+    final Alignment alignment;
+    if (isCenter) {
+      alignment = isTop ? Alignment.topCenter : Alignment.bottomCenter;
+    } else if (isLeft) {
+      alignment = isTop ? Alignment.topLeft : Alignment.bottomLeft;
+    } else {
+      alignment = isTop ? Alignment.topRight : Alignment.bottomRight;
+    }
+    return Align(
+      alignment: alignment,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          isTop ? pad.top + 16 : 16,
+          16,
+          isTop ? 16 : pad.bottom + 24,
+        ),
         child: child,
       ),
     );
@@ -440,8 +421,19 @@ class _BeuiAnimatedToastStackState extends State<BeuiAnimatedToastStack> {
 
   @override
   Widget build(BuildContext context) {
-    if (_shouldPortal) return const SizedBox.shrink();
-    if (_placement == BeuiToastPlacement.absolute) {
+    final overlay = Overlay.maybeOf(context, rootOverlay: true) ??
+        Overlay.maybeOf(context);
+    if (_shouldPortal && overlay != null) {
+      return OverlayPortal(
+        controller: _portal,
+        overlayLocation: OverlayChildLocation.rootOverlay,
+        overlayChildBuilder: (overlayContext) {
+          return _positioned(overlayContext, _stack());
+        },
+        child: const SizedBox.shrink(),
+      );
+    }
+    if (_placement == BeuiToastPlacement.absolute || _shouldPortal) {
       return _positioned(context, _stack());
     }
     return _stack();

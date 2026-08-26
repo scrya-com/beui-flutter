@@ -1,5 +1,6 @@
 import 'package:beui/beui.dart';
 import 'package:beui_gallery/catalog/preview_fit.dart';
+import 'package:beui_gallery/demos/motion/overlay_demos.dart';
 import 'package:beui_gallery/main.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -37,6 +38,34 @@ void main() {
         ),
       ),
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('animated toast stack demo portals a toast onto Overlay',
+      (tester) async {
+    await tester.pumpWidget(
+      BeuiTheme.wrap(
+        brightness: Brightness.dark,
+        child: WidgetsApp(
+          color: const Color(0xFF151515),
+          debugShowCheckedModeBanner: false,
+          pageRouteBuilder: <T>(settings, builder) {
+            return PageRouteBuilder<T>(
+              settings: settings,
+              pageBuilder: (context, _, _) => builder(context),
+            );
+          },
+          home: const ColoredBox(
+            color: Color(0xFF151515),
+            child: AnimatedToastStackDemo(),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.text('Success'));
+    await tester.pump();
+    expect(find.text('Component published'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
